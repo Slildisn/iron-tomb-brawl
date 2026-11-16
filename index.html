@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>鸡蛋大战公鸡</title>
+<title>母鸡大战公鸡</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
-    background: #0a1f10;
+    background: #0e2420;
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
@@ -24,7 +24,7 @@
     justify-content: center;
     text-align: center;
     padding: 24px;
-    color: #a5d6a7;
+    color: #9fd8c8;
     font: 16px/1.7 "Noto Sans SC", "Microsoft YaHei", sans-serif;
     pointer-events: none;
     white-space: pre-line;
@@ -55,9 +55,8 @@
       msg.textContent = 'Phaser 加载失败：所有 CDN 都连不上。\n请检查网络后刷新页面。';
       return;
     }
-    const url = CDNS[i++];
     const s = document.createElement('script');
-    s.src = url;
+    s.src = CDNS[i++];
     s.onload = function () {
       if (window.Phaser) {
         msg.style.display = 'none';
@@ -88,23 +87,102 @@ function bootGame() {
   const cellX = (col) => G.x0 + col * G.cell + G.cell / 2;
   const cellY = (row) => G.y0 + row * G.cell + G.cell / 2;
 
-  // 玩家单位
+  /* 玩家单位 */
   const UNIT_DEFS = {
-    hen: { name: '母鸡', cost: 50, hp: 320, color: 0xff9f1c, size: 84, shape: 'rect' },
-    shooter: { name: '小鸡蛋射手', cost: 100, hp: 220, color: 0xfafafa, size: 76, shape: 'circle' },
-    rock: { name: '石头蛋', cost: 50, hp: 1500, color: 0x9aa0a6, size: 92, shape: 'rect' }
+    hen: { name: '母鸡', cost: 50, hp: 320, size: 84, color: 0xf7c948 },
+    sniper: { name: '小鸡狙击手', cost: 100, hp: 220, size: 76, color: 0xffc489 },
+    rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xd7dee2 }
   };
 
-  // 敌方
+  /* 敌方 */
   const ENEMY = {
     hp: 260,
-    color: 0xd32f2f,
-    w: 66,
+    w: 70,
     h: 82,
-    speed: 26,       // 像素 / 秒
-    peckDmg: 30,     // 每次啄击伤害
-    peckRate: 0.9    // 啄击间隔（秒）
+    speed: 26,
+    peckDmg: 30,
+    peckRate: 0.9
   };
+
+  /* ---------------- 色块绘制工具（原点居中，配合 setPosition 移动） ---------------- */
+  function drawHen(g, s) {
+    const half = s / 2;
+    g.fillStyle(0xf7c948, 1);
+    g.fillRoundedRect(-half, -half + 6, s, s - 6, 16);
+    g.lineStyle(3, 0xd79b1f, 1);
+    g.strokeRoundedRect(-half, -half + 6, s, s - 6, 16);
+
+    g.fillStyle(0xffe08a, 1);
+    g.fillRoundedRect(-8, 2, s * 0.52, s * 0.30, 10);
+
+    g.fillStyle(0xe8633f, 1);
+    g.fillRoundedRect(-14, -half - 10, 28, 16, 7);
+
+    g.fillStyle(0xffa94d, 1);
+    g.fillTriangle(half - 2, 4, half + 18, 12, half - 2, 20);
+
+    g.fillStyle(0x4e342e, 1);
+    g.fillCircle(-16, -12, 5.5);
+  }
+
+  function drawSniper(g, s) {
+    const r = s / 2;
+    g.fillStyle(0xffc489, 1);
+    g.fillCircle(0, 0, r);
+    g.lineStyle(3, 0xffe0bd, 1);
+    g.strokeCircle(0, 0, r);
+
+    g.fillStyle(0x8d6e63, 1);
+    g.fillRoundedRect(r - 8, -5, 26, 10, 4);
+
+    g.fillStyle(0xef8f43, 1);
+    g.fillRoundedRect(-21, -r - 6, 42, 13, 7);
+
+    g.fillStyle(0x4e342e, 1);
+    g.fillCircle(-11, -4, 5.5);
+  }
+
+  function drawRock(g, s) {
+    const half = s / 2;
+    g.fillStyle(0xd7dee2, 1);
+    g.fillRoundedRect(-half, -half, s, s, 12);
+    g.lineStyle(3, 0xa9b6bf, 1);
+    g.strokeRoundedRect(-half, -half, s, s, 12);
+
+    g.fillStyle(0xeef3f5, 1);
+    g.fillRoundedRect(-24, -24, 22, 16, 5);
+
+    g.lineStyle(2, 0xb6c2ca, 1);
+    g.lineBetween(-4, -10, 12, 4);
+    g.lineBetween(12, 4, 4, 22);
+  }
+
+  function drawRooster(g, w, h) {
+    const hw = w / 2;
+    const hh = h / 2;
+
+    g.fillStyle(0xe0553f, 1);
+    g.fillRoundedRect(-hw, -hh + 6, w, h - 6, 12);
+    g.lineStyle(3, 0xa8331f, 1);
+    g.strokeRoundedRect(-hw, -hh + 6, w, h - 6, 12);
+
+    g.fillStyle(0xb93a26, 1);
+    g.fillTriangle(hw - 3, -8, hw + 20, -24, hw + 20, 6);
+
+    g.fillStyle(0xb32d1c, 1);
+    g.fillRoundedRect(-15, -hh - 8, 30, 15, 7);
+
+    g.fillStyle(0xffb347, 1);
+    g.fillTriangle(-hw + 2, -2, -hw - 18, 5, -hw + 2, 12);
+
+    g.fillStyle(0xc62828, 1);
+    g.fillCircle(-hw + 9, 16, 5.5);
+
+    g.fillStyle(0xfff3e0, 1);
+    g.fillCircle(-hw + 17, -16, 5.5);
+    g.fillStyle(0x3e2723, 1);
+    g.fillCircle(-hw + 17, -16, 2.6);
+  }
 
   class GameScene extends Phaser.Scene {
     constructor() {
@@ -131,93 +209,179 @@ function bootGame() {
       this.refreshHud();
     }
 
-    /* ---------- 场地 ---------- */
+    /* ---------------- 场地 ---------------- */
     drawArena() {
+      // 底板
+      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x0e2420);
+
+      // 草坪面板
+      const panel = this.add.graphics();
+      panel.fillStyle(0x2a6355, 1);
+      panel.fillRoundedRect(G.x0 - 8, G.y0 - 8, GRID_W + 16, GRID_H + 16, 18);
+
+      // 格子
       for (let r = 0; r < G.rows; r++) {
         for (let c = 0; c < G.cols; c++) {
-          const color = (r + c) % 2 === 0 ? 0x2e7d32 : 0x276b2b;
-          this.add.rectangle(cellX(c), cellY(r), G.cell - 4, G.cell - 4, color);
+          const color = (r + c) % 2 === 0 ? 0x357a6a : 0x31705f;
+          this.add.rectangle(cellX(c), cellY(r), G.cell - 6, G.cell - 6, color);
         }
       }
 
-      const cy = G.y0 + GRID_H / 2;
-      this.add.rectangle(50, cy, 96, GRID_H, 0x6d4c41).setStrokeStyle(4, 0x3e2723);
-      this.add.text(50, cy - 44, '鸡窝', { fontFamily: FONT, fontSize: '26px', color: '#ffecb3' }).setOrigin(0.5);
-      this.add.text(50, cy + 4, '基地', { fontFamily: FONT, fontSize: '26px', color: '#ffecb3' }).setOrigin(0.5);
-      this.add.rectangle(50, cy + 76, 44, 24, 0xd7ccc8).setStrokeStyle(2, 0x8d6e63);
+      // 淡网格线
+      const lines = this.add.graphics();
+      lines.lineStyle(1, 0xffffff, 0.06);
+      for (let c = 0; c <= G.cols; c++) {
+        lines.lineBetween(G.x0 + c * G.cell, G.y0, G.x0 + c * G.cell, G.y0 + GRID_H);
+      }
+      for (let r = 0; r <= G.rows; r++) {
+        lines.lineBetween(G.x0, G.y0 + r * G.cell, G.x0 + GRID_W, G.y0 + r * G.cell);
+      }
 
-      this.add.rectangle(1230, cy, 96, GRID_H, 0x4e1a1a).setStrokeStyle(4, 0x2b0d0d);
-      this.add.text(1230, cy - 44, '公鸡', { fontFamily: FONT, fontSize: '24px', color: '#ffcdd2' }).setOrigin(0.5);
-      this.add.text(1230, cy + 4, '出兵口', { fontFamily: FONT, fontSize: '22px', color: '#ffcdd2' }).setOrigin(0.5);
-      this.add.rectangle(1230, cy + 76, 44, 24, 0xffab00).setStrokeStyle(2, 0x8d6e00);
+      const cy = G.y0 + GRID_H / 2;
+
+      // 左侧：暖黄色鸡窝
+      const nest = this.add.graphics();
+      nest.fillStyle(0xf0c05a, 1);
+      nest.fillRoundedRect(2, G.y0 + 8, 94, GRID_H - 16, 16);
+      nest.lineStyle(3, 0xd9a13a, 1);
+      nest.strokeRoundedRect(2, G.y0 + 8, 94, GRID_H - 16, 16);
+
+      nest.lineStyle(3, 0xc99230, 0.55);
+      for (let i = 0; i < 5; i++) {
+        const y = G.y0 + 60 + i * 40;
+        nest.beginPath();
+        nest.moveTo(12, y);
+        nest.lineTo(86, y + 12);
+        nest.strokePath();
+        nest.beginPath();
+        nest.moveTo(86, y + 34);
+        nest.lineTo(12, y + 46);
+        nest.strokePath();
+      }
+
+      nest.fillStyle(0xfff6e0, 1);
+      nest.fillCircle(49, cy + 78, 15);
+      nest.lineStyle(2, 0xe0c79a, 1);
+      nest.strokeCircle(49, cy + 78, 15);
+
+      this.add.text(49, cy - 46, '鸡窝', { fontFamily: FONT, fontSize: '20px', color: '#5a3b12', fontStyle: 'bold' }).setOrigin(0.5);
+      this.add.text(49, cy - 20, '基地', { fontFamily: FONT, fontSize: '20px', color: '#5a3b12', fontStyle: 'bold' }).setOrigin(0.5);
+
+      // 右侧：橘红色出兵口
+      const gate = this.add.graphics();
+      gate.fillStyle(0xe8663c, 1);
+      gate.fillRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 16);
+      gate.lineStyle(3, 0xc24a26, 1);
+      gate.strokeRoundedRect(1184, G.y0 + 8, 94, GRID_H - 16, 16);
+
+      gate.fillStyle(0xffd9c6, 0.9);
+      for (let i = 0; i < 4; i++) {
+        gate.fillRoundedRect(1206, G.y0 + 90 + i * 120, 50, 12, 6);
+      }
+
+      this.add.text(1231, cy - 46, '公鸡', { fontFamily: FONT, fontSize: '20px', color: '#fff3eb', fontStyle: 'bold' }).setOrigin(0.5);
+      this.add.text(1231, cy - 20, '来袭', { fontFamily: FONT, fontSize: '20px', color: '#fff3eb', fontStyle: 'bold' }).setOrigin(0.5);
     }
 
-    /* ---------- 卡牌 ---------- */
+    /* ---------------- 卡牌 ---------------- */
     buildCards() {
       const defs = [
-        { key: 'hen', label: '母鸡', cost: UNIT_DEFS.hen.cost, color: UNIT_DEFS.hen.color, shape: 'rect' },
-        { key: 'shooter', label: '小鸡蛋射手', cost: UNIT_DEFS.shooter.cost, color: UNIT_DEFS.shooter.color, shape: 'circle' },
-        { key: 'rock', label: '石头蛋', cost: UNIT_DEFS.rock.cost, color: UNIT_DEFS.rock.color, shape: 'rect' }
+        { key: 'hen', label: '母鸡', cost: UNIT_DEFS.hen.cost, color: 0xf7c948 },
+        { key: 'sniper', label: '小鸡狙击手', cost: UNIT_DEFS.sniper.cost, color: 0xffc489 },
+        { key: 'rock', label: '石头蛋', cost: UNIT_DEFS.rock.cost, color: 0xd7dee2 }
       ];
 
       defs.forEach((d, i) => {
-        const x = 12 + i * 148;
+        const x = 14 + i * 162;
         const y = 8;
-        const w = 138, h = 72;
-        const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x1b3b22)
-          .setStrokeStyle(2, 0x000000, 0.35)
+        const w = 152;
+        const h = 74;
+
+        const g = this.add.graphics();
+
+        this.add.text(x + 60, y + 14, d.label, {
+          fontFamily: FONT, fontSize: '17px', color: '#eafaf4'
+        });
+        const costT = this.add.text(x + 60, y + 44, d.cost + ' 玉米粒', {
+          fontFamily: FONT, fontSize: '14px', color: '#ffd54a'
+        });
+
+        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0.001)
           .setInteractive({ useHandCursor: true });
+        hit.on('pointerdown', () => this.selectCard(d.key));
 
-        if (d.shape === 'circle') {
-          this.add.circle(x + 26, y + h / 2, 16, d.color).setStrokeStyle(3, 0x9e9e9e);
-        } else {
-          this.add.rectangle(x + 26, y + h / 2, 32, 32, d.color).setStrokeStyle(2, 0x000000, 0.3);
-        }
-
-        this.add.text(x + 50, y + 12, d.label, { fontFamily: FONT, fontSize: '17px', color: '#e8f5e9' });
-        this.add.text(x + 50, y + 42, '造价 ' + d.cost, { fontFamily: FONT, fontSize: '16px', color: '#ffe082' });
-
-        bg.on('pointerdown', () => this.selectCard(d.key));
-        this.cards.push({ key: d.key, cost: d.cost, bg });
+        this.cards.push({ key: d.key, cost: d.cost, color: d.color, g, costT, x, y, w, h });
       });
     }
 
     selectCard(key) {
       if (this.over) return;
       this.selected = this.selected === key ? null : key;
-      this.refreshCards();
+      this.redrawCards();
     }
 
-    /* ---------- HUD ---------- */
+    redrawCards() {
+      this.cards.forEach((card) => {
+        const chosen = this.selected === card.key;
+        const afford = this.corn >= card.cost;
+        const g = card.g;
+        const { x, y, w, h } = card;
+
+        g.clear();
+
+        // 阴影
+        g.fillStyle(0x000000, 0.22);
+        g.fillRoundedRect(x + 2, y + 4, w, h, 16);
+
+        // 卡面
+        g.fillStyle(chosen ? 0x1d5347 : 0x14423a, afford ? 1 : 0.55);
+        g.fillRoundedRect(x, y, w, h, 16);
+        g.lineStyle(chosen ? 4 : 2, chosen ? 0xffd54a : 0x3c8f7d, afford ? 1 : 0.45);
+        g.strokeRoundedRect(x, y, w, h, 16);
+
+        // 图标色块
+        g.fillStyle(card.color, afford ? 1 : 0.5);
+        g.fillRoundedRect(x + 14, y + h / 2 - 18, 36, 36, 10);
+        g.lineStyle(2, 0xffffff, 0.2);
+        g.strokeRoundedRect(x + 14, y + h / 2 - 18, 36, 36, 10);
+
+        card.costT.setAlpha(afford ? 1 : 0.45);
+      });
+    }
+
+    /* ---------------- HUD ---------------- */
     buildHud() {
-      this.add.text(640, 14, '鸡蛋大战公鸡', {
-        fontFamily: FONT, fontSize: '26px', color: '#a5d6a7'
-      }).setOrigin(0.5, 0);
+      this.add.text(640, 16, '母鸡大战公鸡', {
+        fontFamily: FONT, fontSize: '38px', color: '#ffe9a8', fontStyle: 'bold'
+      }).setOrigin(0.5, 0).setShadow(0, 3, '#00000099', 10);
 
-      this.cornText = this.add.text(1264, 16, '玉米粒 50', {
-        fontFamily: FONT, fontSize: '30px', color: '#ffd54a'
-      }).setOrigin(1, 0);
+      // 右上角资源
+      this.add.circle(1112, 42, 13, 0xffd54a).setStrokeStyle(3, 0xe0a800);
+      this.add.text(1136, 12, '玉米粒', { fontFamily: FONT, fontSize: '16px', color: '#bfe8dc' });
+      this.cornText = this.add.text(1136, 32, '50', {
+        fontFamily: FONT, fontSize: '28px', color: '#ffd54a', fontStyle: 'bold'
+      });
 
-      this.add.text(640, 704, '点击卡牌选中 → 点击草坪放置 ｜ 点击掉落的玉米粒 +25', {
-        fontFamily: FONT, fontSize: '17px', color: '#b0bec5'
+      // 底部提示条
+      const pillW = 780;
+      const pillH = 28;
+      const pill = this.add.graphics();
+      pill.fillStyle(0x0b1f1b, 0.82);
+      pill.fillRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
+      pill.lineStyle(2, 0x2a6355, 1);
+      pill.strokeRoundedRect(640 - pillW / 2, 690, pillW, pillH, 14);
+
+      this.add.text(640, 704, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
+        fontFamily: FONT, fontSize: '15px', color: '#9fd8c8'
       }).setOrigin(0.5);
     }
 
     refreshHud() {
-      this.cornText.setText('玉米粒 ' + this.corn);
-      this.refreshCards();
+      this.cornText.setText(String(this.corn));
+      this.redrawCards();
     }
 
-    refreshCards() {
-      this.cards.forEach((card) => {
-        const afford = this.corn >= card.cost;
-        const chosen = this.selected === card.key;
-        card.bg.setAlpha(afford ? 1 : 0.45);
-        card.bg.setStrokeStyle(chosen ? 4 : 2, chosen ? 0xfff176 : 0x000000, chosen ? 1 : 0.35);
-      });
-    }
-
-    /* ---------- 输入 ---------- */
+    /* ---------------- 输入 ---------------- */
     bindInput() {
       const zone = this.add.zone(G.x0, G.y0, GRID_W, GRID_H).setOrigin(0);
       zone.setInteractive(new Phaser.Geom.Rectangle(0, 0, GRID_W, GRID_H), Phaser.Geom.Rectangle.Contains);
@@ -232,13 +396,13 @@ function bootGame() {
       if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return;
 
       if (this.findUnit(row, col)) {
-        this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#ff8a80');
+        this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#ffb4a2');
         return;
       }
 
       const def = UNIT_DEFS[this.selected];
       if (this.corn < def.cost) {
-        this.flash(pointer.x, pointer.y, '玉米粒不够', '#ff8a80');
+        this.flash(pointer.x, pointer.y, '玉米粒不够', '#ffb4a2');
         return;
       }
 
@@ -253,48 +417,39 @@ function bootGame() {
     }
 
     flash(x, y, msg, color) {
-      const t = this.add.text(x, y, msg, { fontFamily: FONT, fontSize: '22px', color }).setOrigin(0.5).setDepth(50);
+      const t = this.add.text(x, y, msg, { fontFamily: FONT, fontSize: '22px', color })
+        .setOrigin(0.5).setDepth(50);
       this.tweens.add({ targets: t, y: y - 46, alpha: 0, duration: 800, onComplete: () => t.destroy() });
     }
 
-    /* ---------- 生成单位 ---------- */
+    /* ---------------- 玩家单位 ---------------- */
     spawnUnit(key, row, col) {
       const def = UNIT_DEFS[key];
       const x = cellX(col);
       const y = cellY(row);
-      const parts = [];
 
-      if (key === 'hen') {
-        parts.push(this.add.rectangle(x, y, def.size, def.size, def.color).setStrokeStyle(3, 0xb26500));
-        parts.push(this.add.rectangle(x, y - def.size / 2 - 10, 24, 14, 0xd84315));
-        parts.push(this.add.rectangle(x - def.size / 2 - 9, y + 6, 16, 10, 0xffc107));
-        parts.push(this.add.circle(x - 16, y - 16, 5, 0x3e2723));
-      } else if (key === 'shooter') {
-        parts.push(this.add.circle(x, y, def.size / 2, def.color).setStrokeStyle(4, 0xcfd8dc));
-        parts.push(this.add.circle(x - 14, y - 10, 6, 0x37474f));
-        parts.push(this.add.circle(x + 14, y - 10, 6, 0x37474f));
-      } else {
-        parts.push(this.add.rectangle(x, y, def.size, def.size, def.color).setStrokeStyle(4, 0x616161));
-        parts.push(this.add.rectangle(x - 16, y - 14, 18, 18, 0xb0bec5));
-        parts.push(this.add.rectangle(x + 16, y + 14, 12, 12, 0x78909c));
-      }
+      const g = this.add.graphics();
+      if (key === 'hen') drawHen(g, def.size);
+      else if (key === 'sniper') drawSniper(g, def.size);
+      else drawRock(g, def.size);
+      g.setPosition(x, y);
 
       const barY = y - def.size / 2 - 20;
       const unit = {
         key, row, col, x, y,
         hp: def.hp,
         maxHp: def.hp,
-        parts,
+        body: g,
         barY,
-        bar: this.makeBar(x, barY, def.size, 0x66bb6a),
+        bar: this.makeBar(x, barY, def.size, 0x6ee7a8),
         cd: key === 'hen' ? 2.5 : 0.4
       };
       this.units.push(unit);
     }
 
-    /* ---------- 血条 ---------- */
+    /* ---------------- 血条 ---------------- */
     makeBar(x, y, w, color) {
-      const bg = this.add.rectangle(x, y, w + 6, 10, 0x000000, 0.55);
+      const bg = this.add.rectangle(x, y, w + 6, 10, 0x000000, 0.45);
       const fg = this.add.rectangle(x - w / 2, y, w, 6, color).setOrigin(0, 0.5);
       return { bg, fg, w, color };
     }
@@ -304,19 +459,20 @@ function bootGame() {
       bar.fg.displayWidth = Math.max(0.01, bar.w * ratio);
       bar.bg.setPosition(x, y);
       bar.fg.setPosition(x - bar.w / 2, y);
-      bar.fg.fillColor = ratio > 0.5 ? bar.color : (ratio > 0.25 ? 0xffb300 : 0xe53935);
+      bar.fg.fillColor = ratio > 0.5 ? bar.color : (ratio > 0.25 ? 0xf2b33d : 0xe8553f);
     }
 
-    /* ---------- 敌人 ---------- */
+    /* ---------------- 敌人 ---------------- */
     spawnEnemy() {
       const row = Phaser.Math.Between(0, G.rows - 1);
       const y = cellY(row);
       const x = 1250;
 
-      const body = this.add.rectangle(x, y, ENEMY.w, ENEMY.h, ENEMY.color).setStrokeStyle(3, 0x7f0000);
-      const comb = this.add.rectangle(x, y - ENEMY.h / 2 - 10, 26, 16, 0xb71c1c);
-      const beak = this.add.rectangle(x - ENEMY.w / 2 - 9, y - 2, 18, 12, 0xffab00);
-      const barY = y - ENEMY.h / 2 - 28;
+      const body = this.add.graphics();
+      drawRooster(body, ENEMY.w, ENEMY.h);
+      body.setPosition(x, y);
+
+      const barY = y - ENEMY.h / 2 - 30;
 
       const e = {
         row, x, y,
@@ -324,19 +480,15 @@ function bootGame() {
         maxHp: ENEMY.hp,
         attackCd: 0,
         body,
-        parts: [body, comb, beak],
         barY,
-        bar: this.makeBar(x, barY, 62, 0xef5350)
+        bar: this.makeBar(x, barY, 64, 0xff8a70)
       };
       this.enemies.push(e);
       this.syncEnemy(e);
     }
 
     syncEnemy(e) {
-      e.body.x = e.x;
-      e.body.y = e.y;
-      e.parts[1].x = e.x;
-      e.parts[2].x = e.x - ENEMY.w / 2 - 9;
+      e.body.setPosition(e.x, e.y);
       this.setBar(e.bar, e.hp, e.maxHp, e.x, e.barY);
     }
 
@@ -355,34 +507,34 @@ function bootGame() {
     damageEnemy(e, dmg) {
       e.hp -= dmg;
       if (e.hp <= 0) {
-        e.parts.forEach((o) => o.destroy());
+        e.body.destroy();
         e.bar.bg.destroy();
         e.bar.fg.destroy();
         this.enemies = this.enemies.filter((x) => x !== e);
       } else {
         this.syncEnemy(e);
-        this.tweens.add({ targets: e.body, scaleX: 1.12, scaleY: 0.92, duration: 70, yoyo: true });
+        this.tweens.add({ targets: e.body, scaleX: 1.1, scaleY: 0.92, duration: 70, yoyo: true });
       }
     }
 
     damageUnit(u, dmg) {
       u.hp -= dmg;
       if (u.hp <= 0) {
-        u.parts.forEach((o) => o.destroy());
+        u.body.destroy();
         u.bar.bg.destroy();
         u.bar.fg.destroy();
         this.units = this.units.filter((x) => x !== u);
-        this.flash(u.x, u.y - 20, '碎了！', '#ffab91');
+        this.flash(u.x, u.y - 20, '碎了！', '#ffb4a2');
       } else {
         this.setBar(u.bar, u.hp, u.maxHp, u.x, u.barY);
-        this.tweens.add({ targets: u.parts[0], alpha: 0.4, duration: 60, yoyo: true });
+        this.tweens.add({ targets: u.body, alpha: 0.45, duration: 60, yoyo: true });
       }
     }
 
-    /* ---------- 子弹 ---------- */
+    /* ---------------- 子弹 ---------------- */
     fireBullet(u) {
       const x = u.x + 36;
-      const g = this.add.circle(x, u.y, 9, 0xffffff).setStrokeStyle(3, 0xffb300);
+      const g = this.add.circle(x, u.y, 9, 0xfff3e0).setStrokeStyle(3, 0xffa94d);
       this.bullets.push({ x, y: u.y, row: u.row, speed: 430, dmg: 26, g });
     }
 
@@ -401,13 +553,13 @@ function bootGame() {
       this.bullets = this.bullets.filter((x) => x !== b);
     }
 
-    /* ---------- 掉落玉米粒 ---------- */
+    /* ---------------- 掉落玉米粒 ---------------- */
     dropCorn(x, y0, targetY, life, owner) {
-      const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xf9a825);
-      const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff59d);
+      const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xe0a800);
+      const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff2b0);
       main.setInteractive({ useHandCursor: true });
 
-      const d = { x, y: y0, vy: 95, targetY, life, maxLife: life, main, hi, owner: owner || null, alive: true };
+      const d = { x, y: y0, vy: 95, targetY, life, main, hi, owner: owner || null, alive: true };
 
       main.on('pointerdown', (pointer, lx, ly, event) => {
         if (event && event.stopPropagation) event.stopPropagation();
@@ -445,7 +597,7 @@ function bootGame() {
       this.dropCorn(u.x, u.y - 46, u.y - 76, 8, u);
     }
 
-    /* ---------- 帧更新 ---------- */
+    /* ---------------- 帧更新 ---------------- */
     update(time, delta) {
       if (this.over) return;
       const dt = Math.min(delta, 120) / 1000;
@@ -470,7 +622,7 @@ function bootGame() {
 
     updateUnits(dt) {
       for (const u of this.units) {
-        if (u.key === 'shooter') {
+        if (u.key === 'sniper') {
           u.cd -= dt;
           if (u.cd <= 0) {
             if (this.nearestEnemyAhead(u)) {
@@ -551,19 +703,19 @@ function bootGame() {
       }
     }
 
-    /* ---------- 结束 ---------- */
+    /* ---------------- 结束 ---------------- */
     gameOver() {
       if (this.over) return;
       this.over = true;
       this.selected = null;
-      this.refreshCards();
+      this.redrawCards();
 
-      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x000000, 0.72).setDepth(100);
+      this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x000000, 0.75).setDepth(100);
       this.add.text(CANVAS_W / 2, CANVAS_H / 2 - 70, '公鸡攻破了鸡窝！', {
-        fontFamily: FONT, fontSize: '56px', color: '#ff8a80', fontStyle: 'bold'
+        fontFamily: FONT, fontSize: '56px', color: '#ffb4a2', fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(101);
       this.add.text(CANVAS_W / 2, CANVAS_H / 2 + 10, '游戏结束 · 点击屏幕重新开始', {
-        fontFamily: FONT, fontSize: '28px', color: '#eceff1'
+        fontFamily: FONT, fontSize: '28px', color: '#e8f5ef'
       }).setOrigin(0.5).setDepth(101);
 
       this.time.delayedCall(350, () => {
@@ -577,7 +729,7 @@ function bootGame() {
     width: CANVAS_W,
     height: CANVAS_H,
     parent: 'game',
-    backgroundColor: '#0a1f10',
+    backgroundColor: '#0e2420',
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
