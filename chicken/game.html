@@ -728,7 +728,7 @@ function bootGame() {
     if (!PLANT_CD[k]) PLANT_CD[k] = UNIT_DEFS[k].plantCd || 10;
   });
 
-  // 难度系数：整体放大敌方弃度（1 = 原始难度）
+  // 难度系数：整体放大敌方强度（1 = 原始难度）
   const DIFF = { hp: 1.2, speed: 1.08, basePeck: 1.25 };
 
   /* 鸡窝基地：有血量，被啃空才算失守 */
