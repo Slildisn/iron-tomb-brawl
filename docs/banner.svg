@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-label="母鸡大战公鸡 · 塔防">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff8ec"/><stop offset="55%" stop-color="#ffeed2"/><stop offset="100%" stop-color="#e9f7ec"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="82%" cy="16%" r="26%">
+      <stop offset="0%" stop-color="#ffd873" stop-opacity=".85"/><stop offset="100%" stop-color="#ffd873" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a7e3c4"/><stop offset="100%" stop-color="#8fd6b4"/>
+    </linearGradient>
+    <linearGradient id="hen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe08a"/><stop offset="100%" stop-color="#f5bc3c"/>
+    </linearGradient>
+    <linearGradient id="rooster" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8f70"/><stop offset="100%" stop-color="#ff5f45"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <rect width="1200" height="400" fill="url(#sun)"/>
+
+  <path d="M0 250 q120 -70 240 -18 q90 38 170 -8 q110 -62 220 -6 q120 62 240 12 q130 -54 330 8 v172 H0 Z" fill="#d9f0e2" opacity=".9"/>
+  <path d="M0 292 q150 -46 300 -6 q140 40 280 -6 q150 -50 300 4 q130 44 320 2 v120 H0 Z" fill="#c4e8d6" opacity=".85"/>
+
+  <g transform="translate(250 150)">
+    <rect x="-14" y="-14" width="528" height="212" rx="22" fill="#2f7c69" opacity=".16"/>
+    <rect x="-8" y="-8" width="516" height="200" rx="18" fill="url(#lawn)"/>
+    <rect x="2" y="2" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="58" y="2" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="114" y="2" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="170" y="2" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="226" y="2" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="282" y="2" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="338" y="2" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="394" y="2" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="450" y="2" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="2" y="40" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="58" y="40" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="114" y="40" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="170" y="40" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="226" y="40" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="282" y="40" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="338" y="40" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="394" y="40" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="450" y="40" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="2" y="78" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="58" y="78" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="114" y="78" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="170" y="78" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="226" y="78" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="282" y="78" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="338" y="78" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="394" y="78" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="450" y="78" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="2" y="116" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="58" y="116" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="114" y="116" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="170" y="116" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="226" y="116" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="282" y="116" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="338" y="116" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="394" y="116" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="450" y="116" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="2" y="154" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="58" y="154" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="114" y="154" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="170" y="154" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="226" y="154" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="282" y="154" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="338" y="154" width="52" height="34" rx="8" fill="#8fd6b4"/><rect x="394" y="154" width="52" height="34" rx="8" fill="#7fceaa"/><rect x="450" y="154" width="52" height="34" rx="8" fill="#8fd6b4"/>
+  </g>
+
+  <g transform="translate(300 190)">
+    <ellipse cx="0" cy="30" rx="30" ry="8" fill="#5c4326" opacity=".16"/>
+    <rect x="-26" y="-18" width="52" height="50" rx="16" fill="url(#hen)" stroke="#e0a12f" stroke-width="2.5"/>
+    <rect x="-14" y="-28" width="28" height="14" rx="7" fill="#e8633f"/>
+    <circle cx="-8" cy="-2" r="4" fill="#4a2c18"/>
+    <path d="M26 4 l14 6 -14 6z" fill="#ff8c42"/>
+  </g>
+
+  <g opacity=".95">
+    <ellipse cx="700" cy="330" rx="16" ry="20" fill="#fffdf6" stroke="#e8cfa0" stroke-width="2"/>
+    <ellipse cx="742" cy="344" rx="12" ry="15" fill="#fffdf6" stroke="#e8cfa0" stroke-width="2"/>
+    <circle cx="880" cy="120" r="13" fill="#ffcf5c" stroke="#e8a92c" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(700 176)">
+    <ellipse cx="0" cy="34" rx="30" ry="8" fill="#5c4326" opacity=".16"/>
+    <rect x="-26" y="-24" width="52" height="58" rx="15" fill="url(#rooster)" stroke="#e0674a" stroke-width="2.5"/>
+    <rect x="-14" y="-34" width="28" height="14" rx="7" fill="#e53935"/>
+    <circle cx="-8" cy="-8" r="5" fill="#fff6e0"/>
+    <path d="M-26 0 l-15 6 15 6z" fill="#ffc107"/>
+  </g>
+
+  <text x="600" y="72" text-anchor="middle" font-family="'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif"
+        font-size="54" font-weight="800" fill="#5c4326">母鸡大战公鸡</text>
+  <text x="600" y="108" text-anchor="middle" font-family="'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif"
+        font-size="20" fill="#8a7256" letter-spacing="2">EGG · WAR　5×9 草坪塔防</text>
+</svg>
