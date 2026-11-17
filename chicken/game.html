@@ -1,0 +1,3423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="author" content="CYRENE_Original">
+<title>母鸡大战公鸡</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #fff8ec 0%, #ffefd5 55%, #d8f3e3 100%);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :root {
+    --band-top: 56px;
+    --band-bottom: 100px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 顶部信息栏：独立绝对层，不参与画布布局 */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--band-top);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 0 12px;
+    z-index: 6;
+    background: linear-gradient(180deg, #fff8ec 0%, #fff2dc 100%);
+    border-bottom: 1px solid rgba(255, 224, 168, 0.9);
+    box-shadow: 0 6px 16px -14px rgba(122, 86, 44, 0.7);
+  }
+  .hud-title {
+    margin: 0; font-size: clamp(16px, 2.6vw, 26px); line-height: 1.1;
+    color: #5c4326; letter-spacing: 0.04em; font-weight: 800;
+    white-space: nowrap;
+    text-shadow: 0 2px 0 #ffffff, 0 8px 16px rgba(196, 142, 63, 0.18);
+  }
+  .hud-mid { flex: 1 1 auto; display: flex; justify-content: center; min-width: 0; }
+  .hud-prep { font-size: 14px; font-weight: 700; color: #b35a1f; white-space: nowrap; }
+  .hud-prep[hidden] { display: none; }
+  .hud-corn { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .corn-dot {
+    width: 20px; height: 20px; border-radius: 50%; flex: 0 0 auto;
+    background: radial-gradient(circle at 34% 32%, #fff3c4, #ffcf5c 55%, #e8a92c 100%);
+    box-shadow: 0 2px 6px -2px rgba(154, 111, 42, 0.7);
+  }
+  .corn-label { font-size: 13px; color: #7b6650; }
+  #corn-val { font-size: 22px; color: #c9842a; line-height: 1; display: inline-block; }
+  #corn-val.pulse { animation: cornPop 0.3s ease; }
+  @keyframes cornPop { 0% { transform: scale(1); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+
+  /* 底部卡牌栏：独立绝对层 + 底部安全区 */
+  #card-dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(var(--band-bottom) + var(--safe-bottom));
+    padding: 8px 10px calc(8px + var(--safe-bottom));
+    display: flex; align-items: center; justify-content: center;
+    z-index: 6;
+    background: linear-gradient(180deg, #fff8ec 0%, #fff6e2 45%, #ffefd5 100%);
+    border-top: 1px solid rgba(255, 224, 168, 0.9);
+    box-shadow: 0 -10px 20px -18px rgba(122, 86, 44, 0.9);
+  }
+
+  /* 开局选牌页（PVZ 式卡组） */
+  #deck-screen {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px;
+    background:
+      radial-gradient(900px 520px at 20% -10%, rgba(255, 219, 138, 0.55), transparent 65%),
+      linear-gradient(180deg, #fff8ec 0%, #ffefd5 60%, #d8f3e3 100%);
+  }
+  #deck-screen[hidden] { display: none; }
+  .deck-panel {
+    width: min(760px, 100%); height: min(92vh, 100%);
+    display: flex; flex-direction: column;
+    background: rgba(255, 253, 248, 0.96);
+    border: 2px solid #ffe0a8; border-radius: 22px;
+    box-shadow: 0 18px 40px -24px rgba(122, 86, 44, 0.8);
+    padding: 12px 12px 10px;
+  }
+  .deck-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 4px 8px;
+  }
+  .deck-title { font-size: 18px; font-weight: 800; color: #5c4326; }
+  .deck-count { font-size: 15px; font-weight: 700; color: #c9842a; }
+  .deck-grid {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px; overflow-y: auto; padding: 4px 2px 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .deck-card {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 6px 4px; min-height: 76px;
+    border-radius: 16px; border: 2px solid #ffe0a8;
+    background: linear-gradient(180deg, #fffdf8, #fff6e2);
+    color: #5c4326; font-family: inherit; text-align: center;
+    box-shadow: 0 8px 16px -12px rgba(92, 67, 38, 0.9), inset 0 1px 0 #fff;
+    transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .deck-card .dc-ico {
+    width: 26px; height: 26px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
+  }
+  .deck-card .dc-name { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .deck-card .dc-cost { font-size: 10.5px; color: #c9842a; }
+  .deck-card.sel {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #fff3cf, #ffd98a);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.35), 0 10px 20px -12px rgba(154, 111, 42, 0.8);
+    transform: translateY(-2px);
+  }
+  .deck-card.lock {
+    opacity: 0.42; filter: grayscale(0.9);
+  }
+  .deck-card.lock .dc-cost { color: #6b5a44; }
+  .deck-actions {
+    display: flex; gap: 10px; justify-content: center;
+    padding: 8px 2px calc(2px + env(safe-area-inset-bottom, 0px));
+  }
+  .deck-btn {
+    min-height: 46px; padding: 0 22px; border-radius: 999px;
+    border: 2px solid #ffe0a8; background: #fffdf8;
+    color: #6b4a22; font-family: inherit; font-size: 15px; font-weight: 700;
+  }
+  .deck-btn.primary {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #ffe9a8, #ffc94d);
+    color: #5c4326;
+    box-shadow: 0 10px 22px -12px rgba(180, 120, 30, 0.9);
+  }
+  .deck-btn:disabled { opacity: 0.45; filter: saturate(0.6); }
+
+  /* 右下角玩法工具：铲子 / 倍速（不遮挡卡牌） */
+  #play-tools {
+    position: fixed; right: 10px;
+    bottom: calc(var(--band-bottom) + var(--safe-bottom) + 10px);
+    z-index: 7;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tool-btn {
+    width: 46px; height: 46px; border-radius: 14px;
+    border: 2px solid #ffcf5c;
+    background: linear-gradient(180deg, #fffdf6 0%, #ffe9b8 100%);
+    color: #8a5a2b; font-family: inherit;
+    font-size: 15px; font-weight: 800; line-height: 1;
+    box-shadow: 0 8px 18px -8px rgba(154, 111, 42, 0.55), inset 0 1px 0 #ffffff;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tool-btn:active { transform: translateY(1px) scale(0.97); }
+  .tool-btn.sel {
+    border-color: #ff9f43;
+    background: linear-gradient(180deg, #fff3cf 0%, #ffd98a 100%);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.35), 0 10px 20px -10px rgba(154, 111, 42, 0.7);
+    transform: translateY(-2px);
+  }
+
+  /* 中间战场：固定在两条栏之间，画布等比填充，不被栏内容挤压 */
+  #game {
+    position: fixed; left: 0; right: 0;
+    top: var(--band-top);
+    bottom: calc(var(--band-bottom) + var(--safe-bottom));
+    z-index: 1;
+  }
+
+  .card-bar {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    padding: 2px 12px 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .card-bar::-webkit-scrollbar { display: none; }
+
+  /* 横屏：单行卡槽 + 高度收窄 */
+  @media (orientation: landscape) {
+    :root { --band-bottom: 84px; }
+    .card {
+      flex: 0 0 88px; width: 88px; height: 62px; padding: 3px 4px;
+    }
+    .card .card-ico { width: 20px; height: 20px; }
+    .card-txt b { font-size: 10.5px; }
+    .card-txt i { font-size: 9px; }
+    #play-tools { bottom: calc(var(--band-bottom) + var(--safe-bottom) + 8px); }
+    #play-tools .tool-btn { width: 40px; height: 40px; font-size: 13px; }
+  }
+  .card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; text-align: center;
+    flex: 0 0 104px; width: 104px; height: 74px; padding: 4px 4px; overflow: hidden;
+    scroll-snap-align: start;
+    border-radius: 18px; border: 2px solid #ffe0a8;
+    background: linear-gradient(180deg, #fffdf8, #fff6e2);
+    color: #5c4326; font-family: inherit;
+    box-shadow: 0 10px 18px -12px rgba(92, 67, 38, 0.9), 0 3px 8px -5px rgba(92, 67, 38, 0.25), inset 0 1px 0 #ffffff;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card { position: relative; }
+  .card:active { transform: translateY(1px) scale(0.985); }
+
+  /* PVZ 式卡槽冷却：遮罩从下往上退去 */
+  .card-mask {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+    background: linear-gradient(180deg, rgba(92, 67, 38, 0.30), rgba(92, 67, 38, 0.46));
+    pointer-events: none; z-index: 2;
+    border-radius: 0 0 16px 16px;
+  }
+  .card-cd {
+    position: absolute; left: 0; right: 0; bottom: 5px;
+    text-align: center; font-size: 10.5px; font-weight: 700;
+    color: #4a3a2a; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+    pointer-events: none; z-index: 3; display: none;
+  }
+  .card.cooling { filter: saturate(0.35) brightness(0.94); }
+  .card.cooling .card-cd { display: block; }
+  .card.cooling .card-txt, .card.cooling .card-ico { opacity: 0.55; }
+  .card.locked { pointer-events: none; }
+  .card.glow { animation: cardReady 0.46s ease; }
+  @keyframes cardReady {
+    0%   { box-shadow: 0 0 0 0 rgba(255, 207, 92, 0); }
+    45%  { box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.45), 0 0 18px rgba(255, 207, 92, 0.55); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 207, 92, 0); }
+  }
+  .card.sel {
+    border-color: #ffb63c;
+    background: linear-gradient(180deg, #fff7de, #ffedc4);
+    box-shadow: 0 0 0 4px rgba(255, 207, 92, 0.26), 0 12px 22px -12px rgba(154, 111, 42, 0.9), inset 0 1px 0 #ffffff;
+    transform: translateY(-2px);
+  }
+  .card.off { opacity: 0.55; filter: saturate(0.7); }
+  .card.wave-lock { opacity: 0.45; filter: grayscale(0.85); }
+  .card.wave-lock .card-cd {
+    display: block; font-size: 9px; color: #6b5a44;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  .card-ico, .dc-ico { background-clip: padding-box; }
+  .shape-round { border-radius: 8px; }
+  .shape-circle { border-radius: 50%; }
+  .shape-ellipse { border-radius: 50%; transform: scaleY(0.76); }
+  .shape-square { border-radius: 2px; }
+  .shape-capsule { border-radius: 50% / 34%; }
+  .shape-diamond { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .shape-shuttle { clip-path: polygon(50% 0, 92% 50%, 50% 100%, 8% 50%); }
+  .shape-hexa { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+  .shape-teardrop { border-radius: 50% 50% 50% 10%; }
+  .shape-blob { border-radius: 62% 38% 55% 45%; }
+  .shape-star { clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+  .shape-fan { border-radius: 50% 50% 6% 6%; }
+
+  .card-ico {
+    flex: 0 0 auto; width: 22px; height: 22px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -3px rgba(0, 0, 0, 0.35);
+  }
+  .card-txt {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 1px; width: 100%; min-width: 0; overflow: hidden;
+  }
+  .card-txt b {
+    font-size: 12px; line-height: 1.08; font-weight: 700;
+    white-space: normal; word-break: break-all;
+    overflow: hidden; text-overflow: clip;
+  }
+  .card-txt i {
+    font-style: normal; font-size: 10px; line-height: 1.08; color: #c9842a;
+    white-space: normal;
+    overflow: hidden; text-overflow: clip;
+  }
+  @media (max-width: 380px) {
+    .card-txt b { font-size: 11px; }
+    .card-txt i { font-size: 9px; }
+  }
+    canvas { display: block; }
+
+  /* 自毁处决层 */
+  #egg-fatal {
+    position: fixed; inset: 0; z-index: 2147483000;
+    background: #000; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    padding: 24px; text-align: center;
+    font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  }
+  #egg-fatal .q {
+    font-size: min(42vw, 240px); line-height: 1;
+    animation: eggBlink 0.42s steps(2, end) infinite;
+  }
+  #egg-fatal .t {
+    color: #ff2d55; font-size: clamp(14px, 4vw, 22px);
+    font-weight: 700; letter-spacing: 0.06em; line-height: 1.6;
+  }
+  #egg-fatal .s {
+    color: #cfc7e0; font-size: clamp(11px, 3vw, 15px);
+    line-height: 1.6; word-break: break-all;
+  }
+  @keyframes eggBlink { 50% { color: #ffffff; transform: scale(0.96); } }
+
+  #boot-msg {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    color: #8a7256;
+    font: 16px/1.7 "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    pointer-events: none;
+    white-space: pre-line;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <h1 class="hud-title">母鸡大战公鸡</h1>
+  <div class="hud-mid">
+    <div class="hud-prep" id="prep-line" hidden>安全准备 15s</div>
+  </div>
+  <div class="hud-corn">
+    <span class="corn-dot"></span>
+    <span class="corn-label">玉米粒</span>
+    <b id="corn-val">50</b>
+  </div>
+</div>
+
+<div id="game"></div>
+
+<div id="card-dock">
+  <div class="card-bar" id="card-bar"></div>
+</div>
+
+<div id="deck-screen" hidden>
+  <div class="deck-panel">
+    <div class="deck-head">
+      <span class="deck-title">选择本局卡组</span>
+      <span class="deck-count" id="deck-count">已选 0 / 10</span>
+    </div>
+    <div class="deck-grid" id="deck-grid"></div>
+    <div class="deck-actions">
+      <button class="deck-btn" type="button" id="deck-clear">清空重选</button>
+      <button class="deck-btn primary" type="button" id="deck-start" disabled>开始战斗</button>
+    </div>
+  </div>
+</div>
+
+<div id="play-tools">
+  <button id="speed-btn" class="tool-btn" type="button" aria-label="切换倍速">1×</button>
+  <button id="shovel-btn" class="tool-btn" type="button" aria-label="铲子（移除单位）">🧹</button>
+</div>
+
+<div id="boot-msg">正在加载 Phaser 3 …</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ================= 全局开关 ================= */
+// 测试期间保持 false：关闭全部拦截；发布前改 true
+const isProduction = false;
+
+/* ================= 安全体系（五层） ================= */
+(function security() {
+  const OFFICIAL = 'https://slildisn.github.io/egg-war/';
+  const ALLOWED_HOSTS = ['slildisn.github.io', 'localhost', '127.0.0.1'];
+
+  // 第二层：域名白名单（file:// 时 hostname 为空，放行）
+  function hostAllowed() {
+    const h = String(location.hostname || '').toLowerCase();
+    if (!h) return true;
+    for (let i = 0; i < ALLOWED_HOSTS.length; i++) {
+      if (h === ALLOWED_HOSTS[i]) return true;
+    }
+    return false;
+  }
+
+  // 第三层：版权标记
+  function authorIntact() {
+    const m = document.querySelector('meta[name="author"]');
+    return !!m && String(m.getAttribute('content')) === 'CYRENE_Original';
+  }
+
+  // 第四层：自毁处决
+  function selfDestruct(reason) {
+    if (window.__eggKilled) return;
+    window.__eggKilled = true;
+
+    try {
+      if (window.__eggGame && window.__eggGame.destroy) window.__eggGame.destroy(true);
+    } catch (e) { /* ignore */ }
+
+    try {
+      document.querySelectorAll('canvas').forEach(function (c) {
+        try {
+          const ctx = c.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, c.width, c.height);
+        } catch (e2) { /* ignore */ }
+      });
+    } catch (e3) { /* ignore */ }
+
+    const box = document.createElement('div');
+    box.id = 'egg-fatal';
+    box.innerHTML = '<div class="q">❓</div>' +
+      '<div class="t">FATAL ERROR: 核心记忆缺失，系统已自毁。</div>' +
+      '<div class="s">正版地址：' + OFFICIAL + '</div>';
+    document.body.appendChild(box);
+
+    const kill = function (e) { e.preventDefault(); e.stopPropagation(); };
+    ['click', 'pointerdown', 'touchstart', 'touchmove', 'keydown', 'contextmenu', 'wheel']
+      .forEach(function (ev) { document.addEventListener(ev, kill, { capture: true }); });
+
+    try { console.warn('[SECURITY] fatal:', reason || 'unknown'); } catch (e4) { /* ignore */ }
+  }
+
+  // 第一层：物理拦截
+  function lockInputs() {
+    document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    document.addEventListener('keydown', function (e) {
+      const k = String(e.key || '').toLowerCase();
+      const devtools = k === 'f12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) ||
+        ((e.ctrlKey || e.metaKey) && (k === 'u' || k === 's'));
+      if (devtools) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    try {
+      document.documentElement.style.webkitUserSelect = 'none';
+      document.documentElement.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      document.body.style.userSelect = 'none';
+    } catch (e) { /* ignore */ }
+  }
+
+  window.__eggSecurity = {
+    isProduction: isProduction,
+    hostAllowed: hostAllowed,
+    authorIntact: authorIntact,
+    selfDestruct: selfDestruct
+  };
+
+  // 仅在发布模式启用全部拦截，本地测试零干扰
+  if (!isProduction) return;
+
+  if (!hostAllowed()) {
+    try { location.replace(OFFICIAL); } catch (e) { /* ignore */ }
+    return;
+  }
+
+  if (!authorIntact()) {
+    selfDestruct('meta');
+    return;
+  }
+
+  lockInputs();
+  setInterval(function () {
+    if (!authorIntact()) selfDestruct('meta-tampered');
+  }, 4000);
+})();
+
+/* ================= Phaser CDN 多源加载 ================= */
+(function () {
+  const CDNS = [
+    '../phaser.min.js',
+    'https://unpkg.com/phaser@3.80.1/dist/phaser.min.js',
+    'https://lib.baomitu.com/phaser/3.80.1/phaser.min.js',
+    'https://cdn.staticfile.net/phaser/3.80.1/phaser.min.js',
+    'https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js'
+  ];
+  const msg = document.getElementById('boot-msg');
+  let i = 0;
+
+  function next() {
+    if (i >= CDNS.length) {
+      msg.textContent = 'Phaser 加载失败：所有 CDN 都连不上。\n请检查网络后刷新页面。';
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = CDNS[i++];
+    s.onload = function () {
+      if (window.Phaser) {
+        msg.style.display = 'none';
+        bootGame();
+      } else {
+        next();
+      }
+    };
+    s.onerror = function () { next(); };
+    document.head.appendChild(s);
+  }
+
+  next();
+})();
+
+/* ================= 游戏本体 ================= */
+function bootGame() {
+  // —— 横竖屏自适应 ——
+  const VIEW_W = (typeof window !== 'undefined' && window.innerWidth) || 1280;
+  const VIEW_H = (typeof window !== 'undefined' && window.innerHeight) || 672;
+  const IS_LANDSCAPE = VIEW_W > VIEW_H;
+
+  const SIDE_BAND = IS_LANDSCAPE ? 90 : 100;
+
+  let CANVAS_W = 1280;
+  let CANVAS_H = 672;
+  let GRID_X0 = 100;
+  let GRID_Y0 = 20;
+  let CELL = 120;
+  const COLS = IS_LANDSCAPE ? 10 : 9;
+
+  if (IS_LANDSCAPE) {
+    // 高度贴着屏幕比例算，再由高度反推格子边长（5 行铺满）
+    CANVAS_H = Math.round(1600 * (VIEW_H / VIEW_W));
+    CELL = Math.floor((CANVAS_H - 40) / 5);
+    CANVAS_W = CELL * COLS + SIDE_BAND * 2;
+    GRID_X0 = SIDE_BAND;
+    GRID_Y0 = 20;
+  }
+
+  const G = { x0: GRID_X0, y0: GRID_Y0, cell: CELL, cols: COLS, rows: 5 };
+  const GRID_W = G.cols * G.cell;
+  const GRID_H = G.rows * G.cell;
+
+  const FONT = '"Yuanti SC", "YouYuan", "M PLUS Rounded 1c", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+  const cellX = (col) => G.x0 + col * G.cell + G.cell / 2;
+  const cellY = (row) => G.y0 + row * G.cell + G.cell / 2;
+
+  /* 玩家单位（数值不动） */
+  const UNIT_DEFS = {
+    hen: { name: '母鸡', cost: 50, hp: 320, size: 84, color: 0xffc93c },
+    sniper: { name: '小鸡狙击手', cost: 100, hp: 220, size: 76, color: 0xffd8a8 },
+    rock: { name: '石头蛋', cost: 50, hp: 1500, size: 92, color: 0xe8edf2 },
+    charger: { name: '冲锋小鸡', cost: 60, hp: 150, size: 84, color: 0x7fc4f0 },
+    healer: { name: '治愈母鸡', cost: 120, hp: 280, size: 84, color: 0xffb3d1 },
+    bomber: { name: '炸弹小鸡', cost: 130, hp: 200, size: 84, color: 0x4a4a5a },
+    gunner: { name: '高速连发鸡', cost: 75, hp: 200, size: 84, color: 0x8fd6b4 },
+    reflector: { name: '重甲反伤母鸡', cost: 150, hp: 3000, size: 92, color: 0xb9a7d9 },
+
+    // —— 新增 5 种 ——
+    ice:    { name: '寒冰小鸡', cost: 90,  hp: 200,  size: 80, color: 0x9fd8ff, dmg: 16, atkCd: 1.4, slow: 0.55, slowTime: 1.8 },
+    horn:   { name: '号角母鸡', cost: 140, hp: 260,  size: 84, color: 0xffc98a, haste: 0.8 },
+    storm:  { name: '闪电母鸡', cost: 160, hp: 240,  size: 84, color: 0xd8b6ff, dmg: 22, atkCd: 2.0, chain: 2, chainRange: 150 },
+    cannon: { name: '重炮母鸡', cost: 175, hp: 240,  size: 92, color: 0xd9a06a, dmg: 90, atkCd: 2.6 },
+    shield: { name: '盾卫石母鸡', cost: 150, hp: 1200, size: 92, color: 0xc9d4e8, shieldReduce: 0.25 },
+
+    // ===== 经济系 =====
+    chick:    { name: '雏鸡储粮', cost: 40,  hp: 180, size: 76, color: 0xffe08a, ai: 'economy', deco: 'grain', cycle: 6,   plantCd: 6,  unlock: 1 },
+    gold:     { name: '金羽母鸡', cost: 110, hp: 280, size: 84, color: 0xffd45c, ai: 'economy', deco: 'feather', cycle: 3.5, plantCd: 8,  unlock: 2 },
+    barn:     { name: '谷仓母鸡', cost: 170, hp: 340, size: 90, color: 0xcc9a4a, ai: 'economy', deco: 'silo', cycle: 5,   plantCd: 12, unlock: 3 },
+
+    // ===== 远程系 =====
+    pea:      { name: '豌豆小鸡', cost: 60,  hp: 160, size: 76, color: 0xa8e6a0, ai: 'ranged', deco: 'leaf',  dmg: 18, atkCd: 1.3, plantCd: 5,  unlock: 1 },
+    crossbow: { name: '连弩小鸡', cost: 120, hp: 200, size: 80, color: 0xc8b6ff, ai: 'ranged', deco: 'bolt',  dmg: 24, atkCd: 0.9, range: 4, plantCd: 8, unlock: 2 },
+    ember:    { name: '火焰射手', cost: 130, hp: 200, size: 80, color: 0xffb08a, ai: 'ranged', deco: 'flame', dmg: 20, atkCd: 1.2, plantCd: 9,  unlock: 3 },
+    pierce:   { name: '穿甲狙击', cost: 190, hp: 220, size: 84, color: 0xb0c4de, ai: 'ranged', deco: 'scope', dmg: 70, atkCd: 2.2, plantCd: 12, unlock: 3 },
+    twin:     { name: '双管重炮', cost: 220, hp: 260, size: 92, color: 0xb08d6a, ai: 'ranged', deco: 'cannon', dmg: 60, atkCd: 1.4, plantCd: 15, unlock: 4 },
+    frost:    { name: '冰晶连射', cost: 150, hp: 210, size: 80, color: 0xbfe6ff, ai: 'ranged', deco: 'ice',   dmg: 10, atkCd: 0.7, slow: 0.65, slowTime: 1.2, plantCd: 10, unlock: 4 },
+    thunder:  { name: '雷霆母鸡', cost: 210, hp: 250, size: 84, color: 0xc9a0ff, ai: 'chain',  deco: 'bolt',  dmg: 30, atkCd: 2.4, chain: 2, chainRange: 150, plantCd: 14, unlock: 4 },
+
+    // ===== 坦克系 =====
+    wood:     { name: '木盾蛋',   cost: 70,  hp: 900,  size: 88, color: 0xc9a06a, ai: 'tank', deco: 'wood',  plantCd: 8,  unlock: 2 },
+    iron:     { name: '铁壁蛋',   cost: 120, hp: 2200, size: 92, color: 0xa8b4c4, ai: 'tank', deco: 'plate', plantCd: 12, unlock: 3 },
+    spike:    { name: '尖刺蛋',   cost: 130, hp: 1600, size: 92, color: 0xb0a090, ai: 'tank', deco: 'spike', plantCd: 12, unlock: 4 },
+
+    // ===== 治疗系 =====
+    herb:     { name: '药草母鸡', cost: 100, hp: 240, size: 84, color: 0xa8e0b0, ai: 'healer', deco: 'herb',  heal: 8,  cycle: 3.5, plantCd: 10, unlock: 2 },
+    light:    { name: '圣光母鸡', cost: 220, hp: 300, size: 90, color: 0xfff0b0, ai: 'healer', deco: 'halo',  heal: 16, cycle: 2.6, plantCd: 15, unlock: 4 },
+
+    // ===== 爆破 / 突进 =====
+    mine:     { name: '地雷蛋',   cost: 110, hp: 180, size: 84, color: 0x8a8f7a, ai: 'bomber', deco: 'mine', blast: 110, plantCd: 11, unlock: 3 },
+    dash:     { name: '疾冲小鸡', cost: 90,  hp: 160, size: 80, color: 0x8fd6f0, ai: 'charger', deco: 'dash', dashDmg: 160, plantCd: 9, unlock: 3 },
+
+    // ===== 扩容花名册（新 40 只，参数化复用现有 AI） =====
+    straw: { name: '稻草母鸡', cost: 45, hp: 170, size: 76, color: 0xffe0a0, ai: 'economy', deco: 'grain', cycle: 7, plantCd: 6, unlock: 1 },
+    silver: { name: '银羽母鸡', cost: 95, hp: 250, size: 84, color: 0xf0f0f0, ai: 'economy', deco: 'feather', cycle: 4.2, plantCd: 8, unlock: 2 },
+    copper: { name: '铜羽母鸡', cost: 130, hp: 280, size: 84, color: 0xd9a05a, ai: 'economy', deco: 'feather', cycle: 4.5, plantCd: 9, unlock: 2 },
+    orchard: { name: '果园母鸡', cost: 150, hp: 300, size: 88, color: 0xa8d98a, ai: 'economy', deco: 'leaf', cycle: 4, plantCd: 11, unlock: 3 },
+    mill: { name: '磨坊母鸡', cost: 200, hp: 320, size: 88, color: 0xc9a06a, ai: 'economy', deco: 'silo', cycle: 3.6, plantCd: 12, unlock: 4 },
+    treasury: { name: '金库母鸡', cost: 240, hp: 360, size: 90, color: 0xffd45c, ai: 'economy', deco: 'grain', cycle: 3.2, plantCd: 14, unlock: 5 },
+    spitter: { name: '吐籽小鸡', cost: 55, hp: 150, size: 76, color: 0xb8e09a, ai: 'ranged', deco: 'leaf', dmg: 14, atkCd: 1.1, plantCd: 5, unlock: 2 },
+    twinpea: { name: '双发豌豆', cost: 110, hp: 190, size: 80, color: 0x9fd88a, ai: 'ranged', deco: 'leaf', dmg: 16, atkCd: 1.0, plantCd: 7, unlock: 2 },
+    ember2: { name: '火弩射手', cost: 140, hp: 200, size: 80, color: 0xffb07a, ai: 'ranged', deco: 'flame', dmg: 26, atkCd: 1.3, plantCd: 9, unlock: 3 },
+    scout: { name: '侦察射手', cost: 160, hp: 210, size: 84, color: 0x9fc4e8, ai: 'ranged', deco: 'scope', dmg: 40, atkCd: 1.6, plantCd: 10, unlock: 3 },
+    longbow: { name: '长弓手', cost: 170, hp: 220, size: 84, color: 0xc0a8e8, ai: 'ranged', deco: 'scope', dmg: 55, atkCd: 2.0, plantCd: 11, unlock: 3 },
+    heavy: { name: '重型炮手', cost: 200, hp: 250, size: 92, color: 0xa88a6a, ai: 'ranged', deco: 'cannon', dmg: 75, atkCd: 2.3, plantCd: 13, unlock: 4 },
+    frost2: { name: '霜冻射手', cost: 175, hp: 200, size: 80, color: 0xa8e0ff, ai: 'ranged', deco: 'ice', dmg: 14, atkCd: 0.9, slow: 0.6, slowTime: 1.5, plantCd: 10, unlock: 4 },
+    stormbow: { name: '雷弓手', cost: 185, hp: 220, size: 84, color: 0xc9b0ff, ai: 'ranged', deco: 'bolt', dmg: 45, atkCd: 1.8, plantCd: 12, unlock: 4 },
+    sniper2: { name: '鹰眼狙击', cost: 230, hp: 230, size: 88, color: 0x8fa8c8, ai: 'ranged', deco: 'scope', dmg: 95, atkCd: 2.8, plantCd: 15, unlock: 5 },
+    gatling: { name: '加特林小鸡', cost: 250, hp: 260, size: 88, color: 0xd8c8b0, ai: 'ranged', deco: 'bolt', dmg: 9, atkCd: 0.4, range: 4, plantCd: 16, unlock: 5 },
+    meteor: { name: '流星母鸡', cost: 240, hp: 260, size: 88, color: 0xe0b0ff, ai: 'chain', deco: 'bolt', dmg: 40, atkCd: 2.0, chain: 2, chainRange: 150, plantCd: 16, unlock: 5 },
+    nut: { name: '坚果蛋', cost: 60, hp: 1100, size: 84, color: 0xd9a05a, ai: 'tank', deco: 'wood',  plantCd: 7, unlock: 2 },
+    stone2: { name: '岩甲蛋', cost: 95, hp: 1500, size: 88, color: 0x9aa0a8, ai: 'tank', deco: 'plate',  plantCd: 9, unlock: 2 },
+    iron2: { name: '钢壁蛋', cost: 140, hp: 2400, size: 92, color: 0x9fb0c8, ai: 'tank', deco: 'plate',  plantCd: 12, unlock: 3 },
+    spike2: { name: '荆棘蛋', cost: 150, hp: 1700, size: 92, color: 0xb0a090, ai: 'tank', deco: 'spike',  plantCd: 12, unlock: 3 },
+    magma: { name: '熔岩蛋', cost: 180, hp: 2000, size: 92, color: 0xd07a4a, ai: 'tank', deco: 'flame',  plantCd: 13, unlock: 4 },
+    crystal: { name: '水晶蛋', cost: 190, hp: 2600, size: 92, color: 0xa8d8e8, ai: 'tank', deco: 'ice',  plantCd: 14, unlock: 4 },
+    obsidian: { name: '黑曜蛋', cost: 220, hp: 3200, size: 96, color: 0x6a6a7a, ai: 'tank', deco: 'plate',  plantCd: 15, unlock: 5 },
+    thornking: { name: '荆棘王蛋', cost: 240, hp: 3600, size: 96, color: 0x8a7a6a, ai: 'tank', deco: 'spike',  plantCd: 16, unlock: 5 },
+    bunker: { name: '堡垒蛋', cost: 260, hp: 4200, size: 96, color: 0x8a98a8, ai: 'tank', deco: 'plate',  plantCd: 16, unlock: 5 },
+    granite: { name: '花岗蛋', cost: 210, hp: 3000, size: 96, color: 0x9a9a9a, ai: 'tank', deco: 'wood',  plantCd: 15, unlock: 4 },
+    sprout: { name: '嫩芽母鸡', cost: 90, hp: 220, size: 84, color: 0xb8e8b0, ai: 'healer', deco: 'herb', heal: 6, cycle: 4, plantCd: 9, unlock: 2 },
+    pollen: { name: '花粉母鸡', cost: 120, hp: 240, size: 84, color: 0xffe0a0, ai: 'healer', deco: 'herb', heal: 9, cycle: 3.8, plantCd: 10, unlock: 2 },
+    moon: { name: '月露母鸡', cost: 140, hp: 250, size: 84, color: 0xd0e0ff, ai: 'healer', deco: 'halo', heal: 11, cycle: 3.5, plantCd: 11, unlock: 3 },
+    sunflower: { name: '朝阳母鸡', cost: 160, hp: 260, size: 84, color: 0xffd880, ai: 'healer', deco: 'halo', heal: 12, cycle: 3.2, plantCd: 12, unlock: 3 },
+    spring: { name: '泉心母鸡', cost: 180, hp: 270, size: 84, color: 0xa8e0e0, ai: 'healer', deco: 'herb', heal: 14, cycle: 3.0, plantCd: 13, unlock: 4 },
+    grace: { name: '恩泽母鸡', cost: 200, hp: 280, size: 88, color: 0xfff0b0, ai: 'healer', deco: 'halo', heal: 16, cycle: 2.8, plantCd: 14, unlock: 4 },
+    dawn: { name: '晨曦母鸡', cost: 220, hp: 290, size: 88, color: 0xffe0c0, ai: 'healer', deco: 'halo', heal: 18, cycle: 2.6, plantCd: 15, unlock: 5 },
+    sanct: { name: '圣所母鸡', cost: 240, hp: 300, size: 88, color: 0xfff6d0, ai: 'healer', deco: 'halo', heal: 20, cycle: 2.4, plantCd: 16, unlock: 5 },
+    renew: { name: '复苏母鸡', cost: 260, hp: 320, size: 90, color: 0xc0f0c0, ai: 'healer', deco: 'herb', heal: 22, cycle: 2.2, plantCd: 16, unlock: 5 },
+    bomb2: { name: '爆裂蛋', cost: 90, hp: 160, size: 80, color: 0x9a8f6a, ai: 'bomber', deco: 'mine', blast: 100, plantCd: 9, unlock: 3 },
+    bomb3: { name: '高爆蛋', cost: 150, hp: 190, size: 84, color: 0x8a7f5a, ai: 'bomber', deco: 'mine', blast: 160, plantCd: 11, unlock: 4 },
+    bomb4: { name: '核爆蛋', cost: 200, hp: 220, size: 88, color: 0x7a6f4a, ai: 'bomber', deco: 'mine', blast: 200, plantCd: 14, unlock: 5 },
+    ram: { name: '冲角小鸡', cost: 120, hp: 180, size: 80, color: 0xa8d0f0, ai: 'charger', deco: 'dash', dashDmg: 220, plantCd: 10, unlock: 4 },
+  };
+
+  // 体型档位：S 雏鸡 / M 普通 / L 大型 / XL 攻城级（均小于 120px 格子）
+  const SIZE_TIER = { S: 60, M: 78, L: 90, XL: 100 };
+
+  // 每只单位的轮廓形状 + 体型，保证「形状+体型+配件」组合不重复
+  const UNIT_LOOK = {
+    hen: ['round', 'M', 'round'],
+    sniper: ['diamond', 'M', 'round'],
+    rock: ['star', 'M', 'round'],
+    charger: ['square', 'M', 'round'],
+    healer: ['blob', 'M', 'round'],
+    bomber: ['circle', 'M', 'round'],
+    gunner: ['shuttle', 'M', 'round'],
+    reflector: ['fan', 'M', 'round'],
+    ice: ['teardrop', 'M', 'round'],
+    horn: ['capsule', 'M', 'round'],
+    storm: ['ellipse', 'M', 'round'],
+    cannon: ['hexa', 'M', 'round'],
+    shield: ['diamond', 'M', 'halo'],
+    chick: ['shuttle', 'S', 'grain'],
+    gold: ['star', 'M', 'feather'],
+    barn: ['square', 'M', 'silo'],
+    pea: ['blob', 'M', 'leaf'],
+    crossbow: ['circle', 'M', 'bolt'],
+    ember: ['shuttle', 'M', 'flame'],
+    pierce: ['circle', 'L', 'scope'],
+    twin: ['shuttle', 'L', 'cannon'],
+    frost: ['capsule', 'M', 'ice'],
+    thunder: ['teardrop', 'L', 'bolt'],
+    wood: ['capsule', 'L', 'wood'],
+    iron: ['square', 'XL', 'plate'],
+    spike: ['hexa', 'L', 'spike'],
+    herb: ['star', 'M', 'herb'],
+    light: ['square', 'M', 'halo'],
+    mine: ['blob', 'M', 'mine'],
+    dash: ['ellipse', 'S', 'dash'],
+    straw: ['hexa', 'S', 'grain'],
+    silver: ['fan', 'M', 'feather'],
+    copper: ['teardrop', 'M', 'feather'],
+    orchard: ['capsule', 'M', 'leaf'],
+    mill: ['teardrop', 'L', 'silo'],
+    treasury: ['capsule', 'L', 'grain'],
+    spitter: ['round', 'M', 'leaf'],
+    twinpea: ['diamond', 'M', 'leaf'],
+    ember2: ['star', 'M', 'flame'],
+    scout: ['square', 'M', 'scope'],
+    longbow: ['blob', 'M', 'scope'],
+    heavy: ['square', 'L', 'cannon'],
+    frost2: ['shuttle', 'M', 'ice'],
+    stormbow: ['fan', 'M', 'bolt'],
+    sniper2: ['shuttle', 'L', 'scope'],
+    gatling: ['fan', 'L', 'bolt'],
+    meteor: ['diamond', 'L', 'bolt'],
+    nut: ['star', 'XL', 'wood'],
+    stone2: ['ellipse', 'L', 'plate'],
+    iron2: ['blob', 'XL', 'plate'],
+    spike2: ['round', 'L', 'spike'],
+    magma: ['shuttle', 'XL', 'flame'],
+    crystal: ['star', 'L', 'ice'],
+    obsidian: ['teardrop', 'XL', 'plate'],
+    thornking: ['blob', 'L', 'spike'],
+    bunker: ['ellipse', 'XL', 'plate'],
+    granite: ['shuttle', 'L', 'wood'],
+    sprout: ['capsule', 'M', 'herb'],
+    pollen: ['ellipse', 'M', 'herb'],
+    moon: ['hexa', 'M', 'halo'],
+    sunflower: ['round', 'M', 'halo'],
+    spring: ['diamond', 'M', 'herb'],
+    grace: ['star', 'M', 'halo'],
+    dawn: ['teardrop', 'M', 'halo'],
+    sanct: ['blob', 'M', 'halo'],
+    renew: ['circle', 'M', 'herb'],
+    bomb2: ['shuttle', 'M', 'mine'],
+    bomb3: ['fan', 'M', 'mine'],
+    bomb4: ['teardrop', 'M', 'mine'],
+    ram: ['star', 'S', 'dash'],
+  };
+
+  // 有主动循环技能的单位（仅用于决定“显示不显示冷却”，数值仍由各自 cd 字段决定）
+  const CD_DISPLAY = { hen: 5, sniper: 1.2, healer: 3, gunner: 0.6, ice: 1.4, storm: 2.0, cannon: 2.6 };
+
+  // 玉米粒落地后的自动收取停留时间（秒）；设为 0 即落地立刻收
+  const AUTO_COLLECT_DELAY = 1.2;
+
+  // 卡槽种植冷却（PVZ 式，与单位技能 cd、玉米粒费用彼此独立）
+  const PLANT_CD = {
+    hen: 5,
+    charger: 6,
+    gunner: 6,
+    sniper: 8,
+    healer: 10,
+    rock: 12,
+    bomber: 12,
+    reflector: 15,
+    ice: 8,
+    horn: 12,
+    storm: 12,
+    cannon: 14,
+    shield: 16
+  };
+  // 新单位从配置表读取种植冷却
+  Object.keys(UNIT_DEFS).forEach((k) => {
+    if (!PLANT_CD[k]) PLANT_CD[k] = UNIT_DEFS[k].plantCd || 10;
+  });
+
+  /* 鸡窝基地：有血量，被啃空才算失守 */
+  const BASE = {
+    hp: 300,
+    peckDmg: 12,
+    peckRate: 0.9
+  };
+
+  const PREP_TIME = 15;   // 每波准备时间（秒）
+
+  // 波次配置：改这里就能调难度
+  const WAVES = [
+    { normal: 5,  raider: 0, interval: 4.0, prep: PREP_TIME },
+
+    { normal: 7,  raider: 2, gale: 2, grunt: 2, swift: 1,
+      interval: 3.6, prep: PREP_TIME },
+
+    { normal: 9,  raider: 4, gale: 3, helmet: 2, venom: 1, militia: 2, zipper: 1, ironclad: 1,
+      interval: 3.2, prep: PREP_TIME },
+
+    { normal: 11, raider: 5, gale: 3, helmet: 3, flame: 2, flyer: 2, venom: 2, frenzy: 2, summon: 1, giant: 1,
+      brute: 1, runner: 1, bulwark: 1, pyro: 1, wisp: 1, berserk: 1,
+      interval: 2.8, prep: PREP_TIME },
+
+    { normal: 8,  raider: 4, gale: 4, helmet: 4, flame: 3, flyer: 3, venom: 2, frenzy: 3, summon: 1, giant: 2,
+      bolt: 1, veteran: 1, warlord: 1, tanker: 1, fortress: 1, toxic: 1, sky: 1, colossus: 1, shaman: 1,
+      interval: 2.4, prep: PREP_TIME, boss: true }
+  ];
+
+  /* 敌方（数值不动） */
+  const ENEMY_TYPES = {
+    normal: {
+      name: '大公鸡', hp: 260, w: 70, h: 82, speed: 26,
+      peckDmg: 30, peckRate: 0.9,
+      body: 0xff7a59, light: 0xffa88c, line: 0xe0674a, comb: 0xe53935, tail: 0xd93b2b
+    },
+    raider: {
+      name: '突袭公鸡', hp: 150, w: 64, h: 76, speed: 39,
+      peckDmg: 22, peckRate: 0.8,
+      body: 0xe04a5c, light: 0xff7d8c, line: 0xb02b3c, comb: 0x8e1f34, tail: 0x8e1f34
+    },
+    gale: {
+      name: '疾风小公鸡', hp: 140, w: 64, h: 76, speed: 40,
+      peckDmg: 16, peckRate: 0.6, deco: 'gale',
+      body: 0xffb066, light: 0xffd6a3, line: 0xd98a3f, comb: 0xd9663f, tail: 0xd9663f
+    },
+    helmet: {
+      name: '铁盔公鸡', hp: 320, w: 72, h: 84, speed: 22,
+      peckDmg: 28, peckRate: 0.9, dr: 0.3, slowResist: 0.6, deco: 'helmet',
+      body: 0x9aa6b4, light: 0xc3ccd8, line: 0x6e7885, comb: 0x7f5a4a, tail: 0x7f5a4a
+    },
+    flame: {
+      name: '喷火公鸡', hp: 260, w: 72, h: 84, speed: 24,
+      peckDmg: 26, peckRate: 0.9, burnDmg: 8, burnCd: 1.5, deco: 'flame',
+      body: 0xff8a5c, light: 0xffb98c, line: 0xcc5a30, comb: 0xb33a1f, tail: 0xb33a1f
+    },
+    // ===== 扩容敌人（新 20 种） =====
+    grunt: { name: '杂兵公鸡', hp: 200, w: 70, h: 82, speed: 24, peckDmg: 24, peckRate: 0.9,  deco: 'gale', body: 0xf0a070, light: 0xffc9a8, line: 0xc07a4a, comb: 0xc07a4a, tail: 0xc07a4a },
+    militia: { name: '民兵公鸡', hp: 240, w: 72, h: 84, speed: 26, peckDmg: 26, peckRate: 0.9,  deco: 'gale', body: 0xe09060, light: 0xffb890, line: 0xb06840, comb: 0xb06840, tail: 0xb06840 },
+    brute: { name: '壮汉公鸡', hp: 380, w: 78, h: 88, speed: 20, peckDmg: 34, peckRate: 1, dr: 0.1, deco: 'plate', body: 0xd08050, light: 0xf0a878, line: 0x9a5030, comb: 0x9a5030, tail: 0x9a5030 },
+    veteran: { name: '老兵公鸡', hp: 300, w: 74, h: 84, speed: 24, peckDmg: 28, peckRate: 0.85, dr: 0.15, deco: 'plate', body: 0xc87848, light: 0xe8a070, line: 0x945028, comb: 0x945028, tail: 0x945028 },
+    warlord: { name: '军阀公鸡', hp: 460, w: 80, h: 90, speed: 18, peckDmg: 36, peckRate: 1.1, dr: 0.2, deco: 'plate', body: 0xb86840, light: 0xd89068, line: 0x84401f, comb: 0x84401f, tail: 0x84401f },
+    colossus: { name: '巨像公鸡', hp: 700, w: 96, h: 110, speed: 14, peckDmg: 40, peckRate: 1.2, dr: 0.25, deco: 'plate', body: 0xa05838, light: 0xc88058, line: 0x703828, comb: 0x703828, tail: 0x703828 },
+    swift: { name: '迅捷公鸡', hp: 130, w: 62, h: 74, speed: 44, peckDmg: 14, peckRate: 0.5,  deco: 'gale', body: 0xffc070, light: 0xffdca8, line: 0xd09040, comb: 0xd09040, tail: 0xd09040 },
+    zipper: { name: '疾行公鸡', hp: 150, w: 62, h: 74, speed: 46, peckDmg: 16, peckRate: 0.5,  deco: 'gale', body: 0xffb060, light: 0xffd090, line: 0xc88030, comb: 0xc88030, tail: 0xc88030 },
+    runner: { name: '长跑公鸡', hp: 170, w: 64, h: 76, speed: 42, peckDmg: 18, peckRate: 0.55,  deco: 'gale', body: 0xffa850, light: 0xffc880, line: 0xc87828, comb: 0xc87828, tail: 0xc87828 },
+    bolt: { name: '闪电公鸡', hp: 190, w: 64, h: 76, speed: 48, peckDmg: 20, peckRate: 0.5,  deco: 'gale', body: 0xffb870, light: 0xffd8a0, line: 0xc89040, comb: 0xc89040, tail: 0xc89040 },
+    ironclad: { name: '重甲公鸡', hp: 420, w: 76, h: 86, speed: 18, peckDmg: 30, peckRate: 1, dr: 0.35, slowResist: 0.5, deco: 'plate', body: 0x9aa6b4, light: 0xc3ccd8, line: 0x6e7885, comb: 0x6e7885, tail: 0x6e7885 },
+    bulwark: { name: '壁垒公鸡', hp: 520, w: 80, h: 90, speed: 16, peckDmg: 32, peckRate: 1, dr: 0.4, slowResist: 0.6, deco: 'plate', body: 0x8a94a2, light: 0xb0bcc8, line: 0x5c6673, comb: 0x5c6673, tail: 0x5c6673 },
+    tanker: { name: '要塞公鸡', hp: 600, w: 84, h: 94, speed: 15, peckDmg: 34, peckRate: 1.1, dr: 0.45, slowResist: 0.7, deco: 'plate', body: 0x7a8492, light: 0xa0aab8, line: 0x4c5663, comb: 0x4c5663, tail: 0x4c5663 },
+    fortress: { name: '堡垒公鸡', hp: 780, w: 90, h: 100, speed: 13, peckDmg: 38, peckRate: 1.2, dr: 0.5, slowResist: 0.8, deco: 'plate', body: 0x6a7482, light: 0x909aa8, line: 0x3c4653, comb: 0x3c4653, tail: 0x3c4653 },
+    pyro: { name: '烈炬公鸡', hp: 300, w: 74, h: 86, speed: 23, peckDmg: 28, peckRate: 1, burnDmg: 10, burnCd: 1.4, deco: 'flame', body: 0xff8a5c, light: 0xffb98c, line: 0xcc5a30, comb: 0xcc5a30, tail: 0xcc5a30 },
+    toxic: { name: '毒瘴公鸡', hp: 280, w: 74, h: 86, speed: 22, peckDmg: 24, peckRate: 1, poisonDmg: 8, deco: 'venom', body: 0x9ac06a, light: 0xc8e39a, line: 0x6d8f45, comb: 0x6d8f45, tail: 0x6d8f45 },
+    wisp: { name: '浮空公鸡', hp: 220, w: 66, h: 76, speed: 36, peckDmg: 22, peckRate: 0.9, flying: true, deco: 'wing', body: 0xb28cff, light: 0xd6c2ff, line: 0x7f5ad9, comb: 0x7f5ad9, tail: 0x7f5ad9 },
+    sky: { name: '天翔公鸡', hp: 260, w: 68, h: 78, speed: 38, peckDmg: 24, peckRate: 0.9, flying: true, deco: 'wing', body: 0xa878ff, light: 0xcbb0ff, line: 0x7448d0, comb: 0x7448d0, tail: 0x7448d0 },
+    berserk: { name: '狂战公鸡', hp: 360, w: 76, h: 88, speed: 24, peckDmg: 32, peckRate: 0.7, rage: true, deco: 'rage', body: 0xe04a3c, light: 0xff8a70, line: 0xa82a20, comb: 0xa82a20, tail: 0xa82a20 },
+    shaman: { name: '巫祭公鸡', hp: 340, w: 76, h: 88, speed: 20, peckDmg: 26, peckRate: 1, summonEvery: 7, summonType: "gale", deco: 'summon', body: 0x8a6ad9, light: 0xb9a0ff, line: 0x5f43a8, comb: 0x5f43a8, tail: 0x5f43a8 },
+
+    flyer: {
+      name: '飞行公鸡', hp: 200, w: 66, h: 74, speed: 34,
+      peckDmg: 24, peckRate: 0.9, flying: true, deco: 'wing',
+      body: 0xb28cff, light: 0xd6c2ff, line: 0x7f5ad9, comb: 0x6b3fc0, tail: 0x6b3fc0
+    },
+    venom: {
+      name: '毒雾公鸡', hp: 240, w: 70, h: 82, speed: 24,
+      peckDmg: 20, peckRate: 1.0, poisonDmg: 6, deco: 'venom',
+      body: 0x9ac06a, light: 0xc8e39a, line: 0x6d8f45, comb: 0x6d8f45, tail: 0x6d8f45
+    },
+    frenzy: {
+      name: '狂暴公鸡', hp: 300, w: 72, h: 84, speed: 22,
+      peckDmg: 30, peckRate: 0.8, rage: true, deco: 'rage',
+      body: 0xe04a3c, light: 0xff8a70, line: 0xa82a20, comb: 0x7a1a12, tail: 0x7a1a12
+    },
+    summon: {
+      name: '召唤公鸡', hp: 420, w: 78, h: 88, speed: 18,
+      peckDmg: 24, peckRate: 1.0, summonEvery: 6, summonType: 'gale', deco: 'summon',
+      body: 0x8a6ad9, light: 0xb9a0ff, line: 0x5f43a8, comb: 0x4a2f8a, tail: 0x4a2f8a
+    },
+    giant: {
+      name: '巨型公鸡', hp: 900, w: 105, h: 123, speed: 12,
+      peckDmg: 30, peckRate: 1.0,
+      body: 0xb04a8c, light: 0xd07bb0, line: 0x7e2f62, comb: 0x6b1f4e, tail: 0x6b1f4e,
+      shockEvery: 3, shockDmg: 12
+    }
+  };
+  const ENEMY = ENEMY_TYPES.normal;
+
+  /* ---------------- 日志（正式版已移除调试面板，调用直接跳过） ---------------- */
+  function pushLog() { /* no-op */ }
+
+  /* ---------------- 通用小工具 ---------------- */
+  function makeRng(seed) {
+    let s = seed % 2147483647;
+    if (s <= 0) s += 2147483646;
+    return function () {
+      s = (s * 16807) % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+  }
+
+  function lerpColor(a, b, t) {
+    const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+    const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+    return (Math.round(ar + (br - ar) * t) << 16) |
+           (Math.round(ag + (bg - ag) * t) << 8) |
+           Math.round(ab + (bb - ab) * t);
+  }
+
+  function hpColor(ratio) {
+    const HEALTHY = 0x7fd8a8;
+    const WARN = 0xffcf5c;
+    const DANGER = 0xff9a72;
+    if (ratio > 0.5) return lerpColor(WARN, HEALTHY, (ratio - 0.5) * 2);
+    return lerpColor(DANGER, WARN, ratio * 2);
+  }
+
+  /* ---------------- 单位色块绘制（原点居中） ---------------- */
+  function drawHen(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xffd873, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    g.fillStyle(0xffe28a, 0.85);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.44, 15);
+
+    g.fillStyle(0xffb74d, 0.95);
+    g.fillRoundedRect(-6, 8, s * 0.5, s * 0.28, 12);
+
+    g.lineStyle(2, 0xe0a12f, 0.9);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    g.fillStyle(0xe8633f, 1);
+    g.fillRoundedRect(-15, -half - 12, 30, 18, 9);
+
+    g.fillStyle(0xff8c42, 1);
+    g.fillTriangle(half - 4, 2, half + 16, 9, half - 4, 16);
+
+    g.fillStyle(0x4a2c18, 1);
+    g.fillCircle(-16, -10, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-17.6, -11.6, 1.8);
+  }
+
+  function drawSniper(g, s) {
+    const r = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, r - 2, s * 0.8, s * 0.24);
+
+    g.fillStyle(0xffd8a8, 1);
+    g.fillCircle(0, 0, r);
+    g.fillStyle(0xffe8cc, 0.9);
+    g.fillCircle(-r * 0.26, -r * 0.3, r * 0.56);
+    g.lineStyle(2, 0xe8a86a, 0.95);
+    g.strokeCircle(0, 0, r);
+
+    g.fillStyle(0x9c7a63, 0.95);
+    g.fillRoundedRect(r - 6, -6, 26, 12, 6);
+    g.fillStyle(0xfff1de, 0.9);
+    g.fillRoundedRect(r + 12, -4, 8, 8, 4);
+
+    g.fillStyle(0xff9f43, 1);
+    g.fillRoundedRect(-22, -r - 7, 44, 14, 7);
+    g.fillStyle(0xffb86b, 0.9);
+    g.fillRoundedRect(-22, -r - 7, 44, 6, 3);
+
+    g.fillStyle(0x4a2c18, 1);
+    g.fillCircle(-11, -4, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-12.6, -5.6, 1.8);
+  }
+
+  function drawRock(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 1, s * 0.85, s * 0.24);
+
+    g.fillStyle(0xe8edf2, 1);
+    g.fillRoundedRect(-half, -half, s, s, 16);
+    g.fillStyle(0xf7fafc, 0.95);
+    g.fillRoundedRect(-half + 8, -half + 8, s - 16, (s - 16) * 0.4, 12);
+    g.lineStyle(2, 0xc3ccd4, 1);
+    g.strokeRoundedRect(-half, -half, s, s, 16);
+
+    g.lineStyle(2, 0xb8c4cd, 0.8);
+    g.lineBetween(-6, -12, 12, 2);
+    g.lineBetween(12, 2, 2, 22);
+
+    g.fillStyle(0xd9e2e8, 1);
+    g.fillCircle(-18, 18, 6);
+  }
+
+  function drawRooster(g, w, h, t) {
+    const hw = w / 2;
+    const hh = h / 2;
+    const P0 = t || ENEMY_TYPES.normal;
+    const combW = Math.max(26, w * 0.42);
+
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, hh - 4, w * 0.9, h * 0.22);
+
+    g.fillStyle(P0.tail, 1);
+    g.fillTriangle(hw - 6, -10, hw + Math.round(w * 0.26), -26, hw + Math.round(w * 0.22), 4);
+
+    g.fillStyle(P0.body, 1);
+    g.fillRoundedRect(-hw, -hh + 6, w, h - 6, 16);
+
+    g.fillStyle(P0.light, 0.9);
+    g.fillRoundedRect(-hw + 8, -hh + 12, w - 16, (h - 6) * 0.44, 12);
+
+    g.lineStyle(2, P0.line, 0.9);
+    g.strokeRoundedRect(-hw, -hh + 6, w, h - 6, 16);
+
+    g.fillStyle(P0.comb, 1);
+    g.fillRoundedRect(-combW / 2, -hh - 6, combW, 16, 8);
+
+    g.fillStyle(0xffc107, 1);
+    g.fillTriangle(-hw + 4, -4, -hw - 16, 3, -hw + 4, 10);
+
+    g.fillStyle(0xe53935, 1);
+    g.fillCircle(-hw + 10, 16, 6);
+
+    g.fillStyle(0xfff6e0, 1);
+    g.fillCircle(-hw + 18, -16, 6);
+    g.fillStyle(0x3e2723, 1);
+    g.fillCircle(-hw + 18, -16, 2.8);
+
+    // 类型装饰
+    if (P0.deco === 'helmet') {
+      g.fillStyle(0x6e7885, 1);
+      g.fillRoundedRect(-hw + 6, -hh - 12, w - 10, 14, 7);
+      g.fillStyle(0xc3ccd8, 1);
+      g.fillRect(-hw + 10, -hh - 10, 8, 10);
+    } else if (P0.deco === 'flame') {
+      g.fillStyle(0xffb066, 1);
+      g.fillTriangle(-hw - 10, -6, -hw - 22, 2, -hw - 10, 10);
+      g.fillStyle(0xffe0b0, 1);
+      g.fillCircle(-hw - 12, 2, 3.5);
+    } else if (P0.deco === 'wing') {
+      g.fillStyle(0xd6c2ff, 0.95);
+      g.fillTriangle(-8, -hh - 4, 26, -hh - 26, 10, -hh + 12);
+      g.fillTriangle(10, -hh + 4, 40, -hh - 10, 22, -hh + 20);
+    } else if (P0.deco === 'plate') {
+      g.fillStyle(0xdfe6ef, 0.9);
+      g.fillRoundedRect(-hw + 6, -hh - 6, w - 12, 12, 6);
+      g.lineStyle(2, 0x6e7885, 0.8);
+      g.strokeRoundedRect(-hw + 6, -hh - 6, w - 12, 12, 6);
+    } else if (P0.deco === 'venom') {
+      g.fillStyle(0x6d8f45, 0.95);
+      g.fillCircle(-hw - 8, 4, 5);
+      g.fillStyle(0xc8e39a, 0.9);
+      g.fillCircle(-hw - 12, 12, 3.5);
+    } else if (P0.deco === 'rage') {
+      g.lineStyle(3, 0xff6a4a, 0.85);
+      g.strokeCircle(0, 6, hw + 8);
+    } else if (P0.deco === 'summon') {
+      g.fillStyle(0xd6c2ff, 0.95);
+      g.fillTriangle(0, -hh - 18, 6, -hh - 6, -6, -hh - 6);
+      g.fillCircle(0, -hh - 4, 3);
+    } else if (P0.deco === 'gale') {
+      g.lineStyle(3, 0xffffff, 0.75);
+      g.lineBetween(hw + 8, -14, hw + 28, -14);
+      g.lineBetween(hw + 12, 0, hw + 32, 0);
+      g.lineBetween(hw + 8, 14, hw + 26, 14);
+    }
+  }
+
+  let activeScene = null;
+
+  function drawCharger(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x7fc4f0, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xd6efff, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x4f9bd0, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 向右的冲刺箭头
+    g.fillStyle(0xffffff, 0.95);
+    g.fillTriangle(-6, -12, 18, 0, -6, 12);
+    g.fillTriangle(10, -8, 26, 0, 10, 8);
+
+    g.fillStyle(0x2e5c78, 1);
+    g.fillCircle(-20, -8, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-21.6, -9.6, 1.8);
+  }
+
+  function drawHealer(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xffb3d1, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xffd6e6, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0xe88bb0, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 白色十字
+    g.fillStyle(0xffffff, 0.95);
+    g.fillRoundedRect(-7, -18, 14, 36, 6);
+    g.fillRoundedRect(-18, -7, 36, 14, 6);
+
+    g.fillStyle(0x8c3f5c, 1);
+    g.fillCircle(-24, -22, 4.5);
+  }
+
+  function drawBomber(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x4a4a5a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0x63637a, 0.85);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x2e2e3a, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 引线红点
+    g.fillStyle(0xff5540, 1);
+    g.fillCircle(16, -half - 2, 9);
+    g.fillStyle(0xffd166, 0.95);
+    g.fillCircle(16, -half - 2, 4);
+
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-16, -8, 5);
+    g.fillStyle(0x2e2e3a, 1);
+    g.fillCircle(-16, -8, 2.2);
+  }
+
+  function drawGunner(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x8fd6b4, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xc4f0dd, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.4, 14);
+    g.lineStyle(2, 0x4fae86, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 三连发弹丸
+    g.fillStyle(0xffffff, 0.95);
+    g.fillCircle(half - 14, -8, 5);
+    g.fillCircle(half + 2, -8, 5);
+    g.fillCircle(half + 18, -8, 5);
+
+    g.fillStyle(0x2f6b52, 1);
+    g.fillCircle(-16, 10, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-17.6, 8.4, 1.8);
+  }
+
+  function drawReflector(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xb9a7d9, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xd8cdef, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.38, 12);
+    g.lineStyle(3, 0x7f6aa8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 护盾弧
+    g.lineStyle(5, 0xffffff, 0.55);
+    g.beginPath();
+    g.arc(0, 2, half - 14, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
+    g.strokePath();
+
+    g.fillStyle(0x4a3a63, 1);
+    g.fillCircle(-18, -12, 5.5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-19.6, -13.6, 1.8);
+  }
+
+  function drawIce(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0x9fd8ff, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xdff2ff, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.42, 12);
+    g.lineStyle(2, 0x5aa8d8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 冰锥
+    g.fillStyle(0xffffff, 0.95);
+    g.fillTriangle(-8, -half - 14, 0, -half + 2, 8, -half - 14);
+    g.fillTriangle(6, -half - 8, 14, -half + 2, 22, -half - 8);
+
+    g.fillStyle(0x2e5c78, 1);
+    g.fillCircle(-16, 4, 5);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-17.6, 2.4, 1.8);
+  }
+
+  function drawHorn(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xffc98a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xffe3bf, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.4, 13);
+    g.lineStyle(2, 0xd99a52, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 喇叭
+    g.fillStyle(0xff9f43, 1);
+    g.fillTriangle(half - 12, -6, half + 16, -18, half + 16, 10);
+    g.fillStyle(0xfff1de, 0.9);
+    g.fillRect(half - 14, -4, 12, 8);
+
+    g.fillStyle(0x7a4a1e, 1);
+    g.fillCircle(-16, -6, 5);
+  }
+
+  function drawStorm(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.84, s * 0.24);
+
+    g.fillStyle(0xd8b6ff, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 20);
+    g.fillStyle(0xefe2ff, 0.9);
+    g.fillRoundedRect(-half + 7, -half + 9, s - 14, (s - 8) * 0.4, 13);
+    g.lineStyle(2, 0x9c78d8, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 20);
+
+    // 电弧
+    g.lineStyle(3, 0xffffff, 0.95);
+    g.beginPath();
+    g.moveTo(-14, -half - 12);
+    g.lineTo(-4, -half + 4);
+    g.lineTo(6, -half - 4);
+    g.lineTo(16, -half + 10);
+    g.strokePath();
+
+    g.fillStyle(0x4a3a63, 1);
+    g.fillCircle(-14, 8, 5);
+  }
+
+  function drawCannon(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xd9a06a, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 18);
+    g.fillStyle(0xf0c99f, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.36, 12);
+    g.lineStyle(2, 0xa8703e, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 18);
+
+    // 炮管
+    g.fillStyle(0x6b4a2a, 1);
+    g.fillRoundedRect(half - 8, -10, 26, 20, 8);
+    g.fillStyle(0x3e2a18, 1);
+    g.fillCircle(half + 18, 0, 7);
+
+    g.fillStyle(0x4a2c18, 1);
+    g.fillCircle(-18, -4, 5);
+  }
+
+  function drawShield(g, s) {
+    const half = s / 2;
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, half - 2, s * 0.86, s * 0.24);
+
+    g.fillStyle(0xc9d4e8, 1);
+    g.fillRoundedRect(-half, -half + 4, s, s - 8, 16);
+    g.fillStyle(0xe6ecf7, 0.9);
+    g.fillRoundedRect(-half + 8, -half + 10, s - 16, (s - 8) * 0.36, 12);
+    g.lineStyle(2, 0x8a99b5, 0.95);
+    g.strokeRoundedRect(-half, -half + 4, s, s - 8, 16);
+
+    // 盾牌
+    g.fillStyle(0xffffff, 0.85);
+    g.beginPath();
+    g.arc(half - 18, 0, 16, Phaser.Math.DegToRad(-90), Phaser.Math.DegToRad(90), false);
+    g.closePath();
+    g.fillPath();
+    g.lineStyle(3, 0x7f8ea8, 0.95);
+    g.beginPath();
+    g.arc(half - 18, 0, 16, Phaser.Math.DegToRad(-90), Phaser.Math.DegToRad(90), false);
+    g.strokePath();
+
+    g.fillStyle(0x4a5568, 1);
+    g.fillCircle(-22, -2, 5);
+  }
+
+  // 按轮廓画身体（暖黄软萌风：浅色高光 + 深色描边）
+  function drawBodyShape(g, shape, size, color) {
+    const half = size / 2;
+    const light = 0xffffff;
+
+    g.fillStyle(color, 1);
+    if (shape === 'circle') {
+      g.fillCircle(0, 0, half);
+    } else if (shape === 'ellipse') {
+      g.fillEllipse(0, 0, size, size * 0.78);
+    } else if (shape === 'square') {
+      g.fillRect(-half, -half, size, size);
+    } else if (shape === 'capsule') {
+      g.fillRoundedRect(-half, -half * 0.78, size, size * 0.78, half * 0.5);
+    } else if (shape === 'diamond') {
+      g.fillPoints([
+        new Phaser.Geom.Point(0, -half),
+        new Phaser.Geom.Point(half, 0),
+        new Phaser.Geom.Point(0, half),
+        new Phaser.Geom.Point(-half, 0)
+      ], true);
+    } else if (shape === 'shuttle') {
+      g.fillPoints([
+        new Phaser.Geom.Point(0, -half),
+        new Phaser.Geom.Point(half * 0.86, 0),
+        new Phaser.Geom.Point(0, half),
+        new Phaser.Geom.Point(-half * 0.86, 0)
+      ], true);
+    } else if (shape === 'hexa') {
+      g.fillPoints([
+        new Phaser.Geom.Point(-half * 0.5, -half),
+        new Phaser.Geom.Point(half * 0.5, -half),
+        new Phaser.Geom.Point(half, 0),
+        new Phaser.Geom.Point(half * 0.5, half),
+        new Phaser.Geom.Point(-half * 0.5, half),
+        new Phaser.Geom.Point(-half, 0)
+      ], true);
+    } else if (shape === 'teardrop') {
+      g.fillCircle(0, half * 0.16, half * 0.84);
+      g.fillTriangle(0, -half, -half * 0.62, half * 0.1, half * 0.62, half * 0.1);
+    } else if (shape === 'blob') {
+      g.fillCircle(-half * 0.24, 0, half * 0.8);
+      g.fillCircle(half * 0.26, half * 0.06, half * 0.72);
+    } else if (shape === 'star') {
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const r = (i % 2 === 0) ? half : half * 0.62;
+        const a = -Math.PI / 2 + (Math.PI / 5) * i;
+        pts.push(new Phaser.Geom.Point(Math.cos(a) * r, Math.sin(a) * r));
+      }
+      g.fillPoints(pts, true);
+    } else if (shape === 'fan') {
+      g.beginPath();
+      g.arc(0, half * 0.4, half * 1.12, Phaser.Math.DegToRad(180), Phaser.Math.DegToRad(360), false);
+      g.closePath();
+      g.fillPath();
+    } else {
+      g.fillRoundedRect(-half, -half, size, size, half * 0.42);
+    }
+
+    // 高光
+    g.fillStyle(light, 0.34);
+    if (shape === 'circle' || shape === 'teardrop' || shape === 'blob') {
+      g.fillCircle(-half * 0.22, -half * 0.28, half * 0.42);
+    } else if (shape === 'ellipse') {
+      g.fillEllipse(-half * 0.16, -half * 0.22, size * 0.42, size * 0.26);
+    } else {
+      g.fillRoundedRect(-half * 0.72, -half * 0.62, size * 0.62, size * 0.3, size * 0.12);
+    }
+
+    // 描边
+    g.lineStyle(3, 0x5c4326, 0.28);
+    if (shape === 'circle') g.strokeCircle(0, 0, half);
+    else if (shape === 'ellipse') g.strokeEllipse(0, 0, size, size * 0.78);
+    else if (shape === 'square') g.strokeRect(-half, -half, size, size);
+    else if (shape === 'capsule') g.strokeRoundedRect(-half, -half * 0.78, size, size * 0.78, half * 0.5);
+    else if (shape === 'diamond') g.strokePoints([new Phaser.Geom.Point(0, -half), new Phaser.Geom.Point(half, 0), new Phaser.Geom.Point(0, half), new Phaser.Geom.Point(-half, 0)], true);
+    else if (shape === 'shuttle') g.strokePoints([new Phaser.Geom.Point(0, -half), new Phaser.Geom.Point(half * 0.86, 0), new Phaser.Geom.Point(0, half), new Phaser.Geom.Point(-half * 0.86, 0)], true);
+    else if (shape === 'hexa') g.strokePoints([new Phaser.Geom.Point(-half * 0.5, -half), new Phaser.Geom.Point(half * 0.5, -half), new Phaser.Geom.Point(half, 0), new Phaser.Geom.Point(half * 0.5, half), new Phaser.Geom.Point(-half * 0.5, half), new Phaser.Geom.Point(-half, 0)], true);
+    else if (shape === 'star') {
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const r = (i % 2 === 0) ? half : half * 0.62;
+        const a = -Math.PI / 2 + (Math.PI / 5) * i;
+        pts.push(new Phaser.Geom.Point(Math.cos(a) * r, Math.sin(a) * r));
+      }
+      g.strokePoints(pts, true);
+    }
+  }
+
+  // 配件：占身体约 1/3，独立描边色块
+  function drawAccessory(g, deco, size) {
+    const k = size / 84;         // 以 84px 为基准缩放
+    const u = size / 3;          // 配件目标尺寸
+
+    if (deco === 'grain') {
+      g.fillStyle(0xffd45c, 1); g.lineStyle(2, 0xb8862a, 1);
+      g.fillRoundedRect(-u * 0.22, -size * 0.62, u * 0.44, u, u * 0.18);
+      g.strokeRoundedRect(-u * 0.22, -size * 0.62, u * 0.44, u, u * 0.18);
+      g.fillCircle(-u * 0.3, -size * 0.42, u * 0.16);
+    } else if (deco === 'feather') {
+      g.fillStyle(0xfff3c4, 1); g.lineStyle(2, 0xd9b45c, 1);
+      g.fillTriangle(u * 0.2, -size * 0.62, u * 0.9, -size * 0.3, -u * 0.1, -size * 0.28);
+      g.strokeTriangle(u * 0.2, -size * 0.62, u * 0.9, -size * 0.3, -u * 0.1, -size * 0.28);
+    } else if (deco === 'silo') {
+      g.fillStyle(0xc98a4a, 1); g.lineStyle(2, 0x8a5a2b, 1);
+      g.fillRoundedRect(-u * 0.42, -size * 0.66, u * 0.84, u * 0.72, u * 0.16);
+      g.strokeRoundedRect(-u * 0.42, -size * 0.66, u * 0.84, u * 0.72, u * 0.16);
+    } else if (deco === 'leaf') {
+      g.fillStyle(0x6fbf73, 1); g.lineStyle(2, 0x3f8a4a, 1);
+      g.fillEllipse(u * 0.34, -size * 0.44, u, u * 0.55);
+      g.strokeEllipse(u * 0.34, -size * 0.44, u, u * 0.55);
+    } else if (deco === 'bolt') {
+      g.fillStyle(0xfff6c0, 1); g.lineStyle(2, 0xd9b02a, 1);
+      g.fillPoints([
+        new Phaser.Geom.Point(-u * 0.2, -size * 0.66),
+        new Phaser.Geom.Point(u * 0.26, -size * 0.4),
+        new Phaser.Geom.Point(-u * 0.02, -size * 0.38),
+        new Phaser.Geom.Point(u * 0.24, -size * 0.12),
+        new Phaser.Geom.Point(-u * 0.3, -size * 0.34),
+        new Phaser.Geom.Point(0, -size * 0.36)
+      ], true);
+    } else if (deco === 'flame') {
+      g.fillStyle(0xff8a3c, 1); g.lineStyle(2, 0xc95a1a, 1);
+      g.fillTriangle(u * 0.1, -size * 0.68, u * 0.75, -size * 0.2, -u * 0.5, -size * 0.2);
+      g.strokeTriangle(u * 0.1, -size * 0.68, u * 0.75, -size * 0.2, -u * 0.5, -size * 0.2);
+      g.fillStyle(0xffe0a0, 1);
+      g.fillCircle(u * 0.1, -size * 0.3, u * 0.16);
+    } else if (deco === 'scope') {
+      g.lineStyle(3, 0x5c6b7a, 1);
+      g.strokeCircle(size * 0.34, -size * 0.16, u * 0.42);
+      g.lineStyle(2, 0xffffff, 0.85);
+      g.lineBetween(size * 0.34 - u * 0.42, -size * 0.16, size * 0.34 + u * 0.42, -size * 0.16);
+    } else if (deco === 'cannon') {
+      g.fillStyle(0x5a4632, 1); g.lineStyle(2, 0x3a2c1e, 1);
+      g.fillRoundedRect(size * 0.12, -u * 0.32, u * 0.9, u * 0.64, u * 0.2);
+      g.strokeRoundedRect(size * 0.12, -u * 0.32, u * 0.9, u * 0.64, u * 0.2);
+    } else if (deco === 'ice') {
+      g.fillStyle(0xffffff, 1); g.lineStyle(2, 0x5aa8d8, 1);
+      g.fillTriangle(-u * 0.3, -size * 0.66, 0, -size * 0.2, u * 0.3, -size * 0.66);
+      g.strokeTriangle(-u * 0.3, -size * 0.66, 0, -size * 0.2, u * 0.3, -size * 0.66);
+    } else if (deco === 'wood') {
+      g.lineStyle(3, 0x8a5a2b, 0.95);
+      g.lineBetween(-size * 0.32, -size * 0.3, size * 0.32, -size * 0.3);
+      g.lineBetween(-size * 0.32, -size * 0.1, size * 0.32, -size * 0.1);
+    } else if (deco === 'plate') {
+      g.fillStyle(0xdfe6ef, 1); g.lineStyle(2, 0x7f8ea8, 1);
+      g.fillRoundedRect(-size * 0.3, -size * 0.62, size * 0.6, u * 0.5, u * 0.16);
+      g.strokeRoundedRect(-size * 0.3, -size * 0.62, size * 0.6, u * 0.5, u * 0.16);
+    } else if (deco === 'spike') {
+      g.fillStyle(0xf0e6d8, 1); g.lineStyle(2, 0x9a8a7a, 1);
+      g.fillTriangle(-size * 0.52, -size * 0.08, -size * 0.24, -size * 0.5, -size * 0.24, 0);
+      g.strokeTriangle(-size * 0.52, -size * 0.08, -size * 0.24, -size * 0.5, -size * 0.24, 0);
+    } else if (deco === 'herb') {
+      g.fillStyle(0x5fae7a, 1); g.lineStyle(2, 0x3f7a56, 1);
+      g.fillEllipse(-u * 0.3, -size * 0.44, u * 0.8, u * 0.42);
+      g.strokeEllipse(-u * 0.3, -size * 0.44, u * 0.8, u * 0.42);
+    } else if (deco === 'halo') {
+      g.lineStyle(4, 0xffe9a8, 1);
+      g.strokeEllipse(0, -size * 0.56, size * 0.66, u * 0.42);
+    } else if (deco === 'mine') {
+      g.fillStyle(0x3a3a30, 1); g.lineStyle(2, 0x1e1e18, 1);
+      g.fillCircle(0, -size * 0.52, u * 0.4);
+      g.strokeCircle(0, -size * 0.52, u * 0.4);
+      g.fillStyle(0xff5540, 1);
+      g.fillCircle(0, -size * 0.52, u * 0.16);
+    } else if (deco === 'dash') {
+      g.lineStyle(3, 0xffffff, 0.9);
+      g.lineBetween(size * 0.18, -u * 0.24, size * 0.62, -u * 0.24);
+      g.lineBetween(size * 0.18, u * 0.1, size * 0.56, u * 0.1);
+    } else {
+      g.fillStyle(0xffe9b8, 1); g.lineStyle(2, 0xd9a94a, 1);
+      g.strokeCircle(0, -size * 0.5, u * 0.42);
+    }
+  }
+
+  // 统一入口：轮廓 + 高光 + 配件 + 眼睛
+  function drawUnitBody(g, def) {
+    const look = UNIT_LOOK[def.key] || ['round', 'M'];
+    const shape = look[0];
+    const size = SIZE_TIER[look[1]] || def.size || 84;
+
+    g.fillStyle(0x5c4326, 0.12);
+    g.fillEllipse(0, size / 2 - 2, size * 0.8, size * 0.2);
+
+    drawBodyShape(g, shape, size, def.color);
+    drawAccessory(g, def.deco || 'round', size);
+
+    g.fillStyle(0x4a2c18, 1);
+    g.fillCircle(-size * 0.16, size * 0.04, size * 0.055);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(-size * 0.175, size * 0.02, size * 0.02);
+  }
+
+  class GameScene extends Phaser.Scene {
+    constructor() {
+      super('GameScene');
+    }
+
+    create() {
+      activeScene = this;
+
+      this.corn = 50;
+      this.over = false;
+      this.paused = false;
+      this.selected = null;
+      this.clock = 0;
+
+      this.units = [];
+      this.enemies = [];
+      this.bullets = [];
+      this.drops = [];
+      this.cards = [];
+
+      this.baseHp = BASE.hp;
+      this.state = 'PREPARING';
+      this.waveIndex = 0;
+      this.prepLeft = WAVES[0].prep;
+      this.waveQueue = [];
+      this.spawnTimer = 0;
+      this.timers = { corn: 2.2 };
+      this.pendingRow = null;
+      this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
+      this.shovel = false;        // 铲子是否选中
+      this.speedScale = 1;        // 1× / 2× 倍速
+      this.deck = this.loadDeck();       // 已保存的 10 只卡组
+      this.deckPicking = false;
+
+      this.drawArena();
+      this.buildCards();
+      this.buildHud();
+      this.bindInput();
+      this.refreshHud();
+      this.syncTools();
+
+      this.state = 'PREPARING';
+      this.paused = true;          // 选牌 / 剧情期间冻结
+
+      pushLog('🎮 新一局开始');
+
+      const quick = this.game.registry.get('quickDeck');
+      if (quick) this.game.registry.set('quickDeck', false);
+
+      if (!this.game.registry.get('storySeen')) {
+        this.game.registry.set('storySeen', true);
+        this.showStory();          // 剧情关闭 → 打开选牌
+      } else if (quick && this.deck.length === 10) {
+        this.closeDeck();
+        this.paused = false;
+        this.startPrep();          // 沿用卡组，直接进准备阶段
+      } else {
+        this.openDeck();
+      }
+    }
+
+    /* ---------------- 场地 ---------------- */
+    drawArena() {
+      const bg = this.add.graphics();
+      bg.fillGradientStyle(0xfff8ec, 0xfff8ec, 0xffeed2, 0xffeed2, 1);
+      bg.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      const panel = this.add.graphics();
+      panel.fillStyle(0x8fd6b4, 0.42);
+      panel.fillRoundedRect(G.x0 - 10, G.y0 - 10, GRID_W + 20, GRID_H + 20, 22);
+      panel.fillStyle(0x5c4326, 0.06);
+      panel.fillRoundedRect(G.x0 - 4, G.y0 - 4, GRID_W + 8, GRID_H + 8, 18);
+
+      // 圆角格子
+      const cells = this.add.graphics();
+      for (let r = 0; r < G.rows; r++) {
+        for (let c = 0; c < G.cols; c++) {
+          const color = (r + c) % 2 === 0 ? 0x9adfc0 : 0x8ad6b4;
+          cells.fillStyle(color, 1);
+          cells.fillRoundedRect(
+            cellX(c) - (G.cell - 8) / 2,
+            cellY(r) - (G.cell - 8) / 2,
+            G.cell - 8,
+            G.cell - 8,
+            12
+          );
+        }
+      }
+
+      // 草地纹理
+      const tex = this.add.graphics();
+      const rnd = makeRng(20261116);
+      for (let i = 0; i < 760; i++) {
+        const x = G.x0 + rnd() * GRID_W;
+        const y = G.y0 + rnd() * GRID_H;
+        const light = rnd() > 0.42;
+        const len = 4 + rnd() * 7;
+        tex.lineStyle(2, light ? 0xffffff : 0x4fae86, light ? 0.20 : 0.10);
+        tex.lineBetween(x, y, x + (rnd() - 0.5) * 5, y - len);
+      }
+
+      // 极淡网格线
+      const lines = this.add.graphics();
+      lines.lineStyle(1, 0xffffff, 0.10);
+      for (let c = 0; c <= G.cols; c++) {
+        lines.lineBetween(G.x0 + c * G.cell, G.y0, G.x0 + c * G.cell, G.y0 + GRID_H);
+      }
+      for (let r = 0; r <= G.rows; r++) {
+        lines.lineBetween(G.x0, G.y0 + r * G.cell, G.x0 + GRID_W, G.y0 + r * G.cell);
+      }
+
+      // 首页同款鸡蛋装饰（纯装饰，不参与任何玩法逻辑）
+      const deco = this.add.graphics();
+      deco.fillStyle(0xfffdf6, 0.55);
+      deco.fillEllipse(G.x0 + 38, G.y0 + 34, 24, 32);
+      deco.fillEllipse(G.x0 + GRID_W - 44, G.y0 + 38, 20, 26);
+      deco.fillEllipse(G.x0 + 34, G.y0 + GRID_H - 34, 18, 24);
+      deco.fillStyle(0xfff3c4, 0.45);
+      deco.fillCircle(G.x0 + 30, G.y0 + 28, 6);
+      deco.fillCircle(G.x0 + GRID_W - 52, G.y0 + 32, 5);
+
+      // 第三层：隐藏版权水印（最底层，几乎透明）
+      this.add.text(CANVAS_W / 2, CANVAS_H / 2, 'CYRENE', {
+        fontFamily: FONT, fontSize: '150px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setAlpha(0.05).setDepth(-10);
+
+      const cy = G.y0 + GRID_H / 2;
+
+      // 左侧暖黄鸡窝（宽度 = 左侧留白 - 6）
+      const nestW = Math.max(64, G.x0 - 6);
+      const nestX = 2;
+      const nestCx = nestX + nestW / 2;
+
+      const nest = this.add.graphics();
+      nest.fillStyle(0x5c4326, 0.10);
+      nest.fillRoundedRect(nestX + 4, G.y0 + 14, nestW, GRID_H - 16, 18);
+
+      nest.fillStyle(0xffc94d, 1);
+      nest.fillRoundedRect(nestX, G.y0 + 8, nestW, GRID_H - 16, 18);
+      nest.fillStyle(0xffd97a, 0.85);
+      nest.fillRoundedRect(nestX + 6, G.y0 + 16, nestW - 12, 120, 14);
+      nest.lineStyle(2, 0xe0a12f, 0.9);
+      nest.strokeRoundedRect(nestX, G.y0 + 8, nestW, GRID_H - 16, 18);
+
+      nest.lineStyle(3, 0xd9a03a, 0.45);
+      for (let i = 0; i < 5; i++) {
+        const y = G.y0 + 70 + i * 92;
+        nest.beginPath();
+        nest.moveTo(nestX + 10, y);
+        nest.lineTo(nestX + nestW - 8, y + 14);
+        nest.strokePath();
+        nest.beginPath();
+        nest.moveTo(nestX + nestW - 8, y + 40);
+        nest.lineTo(nestX + 10, y + 54);
+        nest.strokePath();
+      }
+
+      nest.fillStyle(0xfff8e8, 1);
+      nest.fillCircle(nestCx, cy + 84, 15);
+      nest.lineStyle(2, 0xe8cfa0, 1);
+      nest.strokeCircle(nestCx, cy + 84, 15);
+
+      this.add.text(nestCx, cy - 48, '鸡窝', {
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      this.add.text(nestCx, cy - 20, '基地', {
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      // 基地血量
+      this.baseBarBg = this.add.rectangle(nestCx, cy + 36, 68, 10, 0x5c4326, 0.20);
+      this.baseBarFg = this.add.rectangle(nestCx - 32, cy + 36, 64, 6, 0x7fd8a8).setOrigin(0, 0.5);
+      this.baseHpText = this.add.text(nestCx, cy + 58, String(BASE.hp), {
+        fontFamily: FONT, fontSize: '18px', color: '#5a3b12', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      // 右侧橘红出兵口（贴画布右边缘，随宽度自适应）
+      const gateW = Math.max(64, CANVAS_W - (G.x0 + GRID_W) - 6);
+      const gateX = CANVAS_W - gateW - 2;
+      const gateCx = gateX + gateW / 2;
+      this.gateCenterX = gateCx;
+
+      const gate = this.add.graphics();
+      gate.fillStyle(0x5c4326, 0.10);
+      gate.fillRoundedRect(gateX + 2, G.y0 + 14, gateW, GRID_H - 16, 18);
+
+      gate.fillStyle(0xffb08a, 1);
+      gate.fillRoundedRect(gateX, G.y0 + 8, gateW, GRID_H - 16, 18);
+      gate.fillStyle(0xffd6c0, 0.8);
+      gate.fillRoundedRect(gateX + 6, G.y0 + 16, gateW - 12, 120, 14);
+      gate.lineStyle(2, 0xe8996f, 0.95);
+      gate.strokeRoundedRect(gateX, G.y0 + 8, gateW, GRID_H - 16, 18);
+
+      gate.fillStyle(0xfff0e4, 0.85);
+      for (let i = 0; i < 4; i++) {
+        gate.fillRoundedRect(gateCx - 23, G.y0 + 96 + i * 122, 46, 12, 6);
+      }
+
+      this.add.text(gateCx, cy - 48, '公鸡', {
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5);
+      this.add.text(gateCx, cy - 20, '来袭', {
+        fontFamily: FONT, fontSize: '21px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5);
+    }
+
+    /* ---------------- 卡牌 ---------------- */
+    buildCards() {
+      // 只渲染本局卡组（未选牌时留空）
+      const keys = (this.deck && this.deck.length)
+        ? this.deck.slice(0, 10)
+        : [];
+      const defs = keys.map((k) => ({
+        key: k,
+        label: UNIT_DEFS[k].name,
+        cost: UNIT_DEFS[k].cost,
+        color: UNIT_DEFS[k].color,
+        unlock: UNIT_DEFS[k].unlock || 1
+      }));
+
+
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      bar.innerHTML = '';
+
+      defs.forEach((d) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'card';
+        btn.dataset.key = d.key;
+        btn.dataset.unlock = String(d.unlock || 1);
+
+        const ico = document.createElement('span');
+        const look = UNIT_LOOK[d.key] || ['round', 'M'];
+        ico.className = 'card-ico shape-' + look[0];
+        ico.style.background = '#' + d.color.toString(16).padStart(6, '0');
+
+        const txt = document.createElement('span');
+        txt.className = 'card-txt';
+        const nm = document.createElement('b');
+        nm.textContent = d.label;
+        const cost = document.createElement('i');
+        cost.textContent = d.cost + ' 玉米粒';
+        txt.appendChild(nm);
+        txt.appendChild(cost);
+
+        const mask = document.createElement('span');
+        mask.className = 'card-mask';
+
+        const cdTxt = document.createElement('span');
+        cdTxt.className = 'card-cd';
+
+        btn.appendChild(ico);
+        btn.appendChild(txt);
+        btn.appendChild(mask);
+        btn.appendChild(cdTxt);
+        btn.addEventListener('click', () => this.selectCard(d.key));
+        bar.appendChild(btn);
+      });
+
+      this.syncCards();
+    }
+
+    selectCard(key) {
+      if (this.over || this.paused) return;
+      const d = UNIT_DEFS[key];
+      if (d && (d.unlock || 1) > (this.waveIndex + 1)) return;   // 未解锁
+      if ((this.plantCd[key] || 0) > 0) return;   // 卡槽冷却中，禁止选中
+      this.shovel = false;                        // 选卡与铲子互斥
+      this.syncTools();
+      this.selected = this.selected === key ? null : key;
+      this.syncCards();
+    }
+
+    syncCards() {
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      bar.querySelectorAll('.card').forEach((btn) => {
+        const key = btn.dataset.key;
+        const def = UNIT_DEFS[key];
+        if (!def) return;
+        const waveLock = (def.unlock || 1) > (this.waveIndex + 1);
+        const cooling = (this.plantCd[key] || 0) > 0;
+
+        btn.classList.toggle('wave-lock', waveLock);
+        btn.classList.toggle('cooling', cooling && !waveLock);
+        btn.classList.toggle('locked', cooling || waveLock);
+        btn.classList.toggle('sel', !cooling && !waveLock && this.selected === key);
+        // 冷却优先拦截，其次费用；波次锁直接显示解锁提示
+        btn.classList.toggle('off', !cooling && !waveLock && this.corn < def.cost);
+
+        const txt = btn.querySelector('.card-cd');
+        if (txt) {
+          if (waveLock) txt.textContent = '第 ' + (def.unlock || 1) + ' 波解锁';
+          else if (!cooling) txt.textContent = '';
+        }
+      });
+    }
+
+    /* ---------------- HUD ---------------- */
+    buildHud() {
+      const pillW = Math.min(900, CANVAS_W - 80);
+      const pillH = 28;
+      const pillY = CANVAS_H - 38;
+      const pill = this.add.graphics();
+      pill.fillStyle(0xfffdf8, 0.94);
+      pill.fillRoundedRect(CANVAS_W / 2 - pillW / 2, pillY, pillW, pillH, 14);
+      pill.lineStyle(2, 0xffcf5c, 0.95);
+      pill.strokeRoundedRect(CANVAS_W / 2 - pillW / 2, pillY, pillW, pillH, 14);
+
+      this.add.text(CANVAS_W / 2, pillY + 14, '① 点卡牌选中   ② 点草坪格子放置   ③ 点掉落的玉米粒 +25', {
+        fontFamily: FONT, fontSize: '15px', color: '#7b6650'
+      }).setOrigin(0.5);
+
+    }
+
+    setPrepLine(text) {
+      const el = document.getElementById('prep-line');
+      if (!el) return;
+      if (!text) { el.hidden = true; return; }
+      if (el.textContent !== text) el.textContent = text;
+      el.hidden = false;
+    }
+
+    refreshHud() {
+      const el = document.getElementById('corn-val');
+      if (el) el.textContent = String(this.corn);
+      this.syncCards();
+    }
+
+    bindInput() {
+      this.hoverCell = this.add.rectangle(0, 0, G.cell - 10, G.cell - 10, 0xffffff, 0.10)
+        .setVisible(false).setDepth(5);
+
+      const zone = this.add.zone(G.x0, G.y0, GRID_W, GRID_H).setOrigin(0);
+      zone.setInteractive(new Phaser.Geom.Rectangle(0, 0, GRID_W, GRID_H), Phaser.Geom.Rectangle.Contains);
+      zone.on('pointerdown', (pointer) => this.onGridClick(pointer));
+      zone.on('pointermove', (pointer) => this.onPointerMove(pointer));
+      zone.on('pointerout', () => this.hoverCell.setVisible(false));
+    }
+
+    onPointerMove(pointer) {
+      if (!this.selected || this.over) {
+        this.hoverCell.setVisible(false);
+        return;
+      }
+      const col = Math.floor((pointer.x - G.x0) / G.cell);
+      const row = Math.floor((pointer.y - G.y0) / G.cell);
+      if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) {
+        this.hoverCell.setVisible(false);
+        return;
+      }
+      const busy = !!this.findUnit(row, col);
+      this.hoverCell.setFillStyle(busy ? 0xffa27a : 0xbdf3d8, 0.32);
+      this.hoverCell.setPosition(cellX(col), cellY(row));
+      this.hoverCell.setVisible(true);
+    }
+
+    onGridClick(pointer) {
+      if (this.over || this.paused) return;
+
+      const col = Math.floor((pointer.x - G.x0) / G.cell);
+      const row = Math.floor((pointer.y - G.y0) / G.cell);
+      if (col < 0 || col >= G.cols || row < 0 || row >= G.rows) return;
+
+      // 铲子模式：点场上的单位即可移除并返还 30% 费用
+      if (this.shovel) {
+        const target = this.findUnit(row, col);
+        if (target) this.digUnit(target);
+        else this.flash(pointer.x, pointer.y, '这里没有单位', '#b35a1f');
+        return;
+      }
+
+      if (!this.selected) return;
+
+      if (this.findUnit(row, col)) {
+        this.flash(pointer.x, pointer.y, '这里已经有蛋了', '#d9673f');
+        return;
+      }
+
+      const def = UNIT_DEFS[this.selected];
+      if (this.corn < def.cost) {
+        this.flash(pointer.x, pointer.y, '玉米粒不够', '#d9673f');
+        return;
+      }
+
+      const usedKey = this.selected;
+      this.corn -= def.cost;
+      this.spawnUnit(usedKey, row, col);
+      this.startCardCooldown(usedKey);
+      this.selected = null;
+      this.hoverCell.setVisible(false);
+      this.refreshHud();
+    }
+
+    findUnit(row, col) {
+      return this.units.find((u) => u.row === row && u.col === col);
+    }
+
+    flash(x, y, msg, color) {
+      const t = this.add.text(x, y, msg, { fontFamily: FONT, fontSize: '22px', color })
+        .setOrigin(0.5).setDepth(50);
+      this.tweens.add({ targets: t, y: y - 46, alpha: 0, duration: 800, onComplete: () => t.destroy() });
+    }
+
+    /* ---------------- 特效 ---------------- */
+    sparkle(x, y) {
+      const ring = this.add.circle(x, y, 12, 0xffe9a8, 0.85).setStrokeStyle(3, 0xffd54a).setDepth(40);
+      ring.setScale(0.35);
+      this.tweens.add({
+        targets: ring, scale: 1.7, alpha: 0, duration: 330, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6;
+        const dot = this.add.circle(x, y, 3.5, 0xfff2b0).setDepth(40);
+        this.tweens.add({
+          targets: dot,
+          x: x + Math.cos(a) * 34,
+          y: y + Math.sin(a) * 34,
+          alpha: 0,
+          duration: 350,
+          ease: 'Cubic.easeOut',
+          onComplete: () => dot.destroy()
+        });
+      }
+    }
+
+    shatter(x, y, color, count, depth) {
+      for (let i = 0; i < count; i++) {
+        const ang = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+        const dist = 26 + Math.random() * 34;
+        const w = 7 + Math.random() * 8;
+        const h = 6 + Math.random() * 8;
+        const shard = this.add.rectangle(x, y, w, h, color, 0.95)
+          .setDepth(depth || 30)
+          .setStrokeStyle(1, 0x000000, 0.12);
+        this.tweens.add({
+          targets: shard,
+          x: x + Math.cos(ang) * dist,
+          y: y + Math.sin(ang) * dist + 16,
+          angle: Phaser.Math.Between(-180, 180),
+          alpha: 0,
+          duration: 380 + Math.random() * 160,
+          ease: 'Cubic.easeOut',
+          onComplete: () => shard.destroy()
+        });
+      }
+    }
+
+    hitFlash(x, y, w, h) {
+      const f = this.add.rectangle(x, y, w, h, 0xfff3c4, 0.55).setDepth(25);
+      this.tweens.add({ targets: f, alpha: 0, duration: 130, onComplete: () => f.destroy() });
+    }
+
+    /* ---------------- 玩家单位 ---------------- */
+    spawnUnit(key, row, col) {
+      const def = UNIT_DEFS[key];
+      const x = cellX(col);
+      const y = cellY(row);
+
+      const g = this.add.graphics();
+      drawUnitBody(g, def);
+      g.setPosition(x, y);
+
+      g.setScale(0.6);
+      this.tweens.add({ targets: g, scale: 1, duration: 240, ease: 'Back.easeOut' });
+
+      const barY = y - def.size / 2 - 20;
+      const bar = this.makeBar(x, barY, def.size);
+
+      const unit = {
+        key, row, col, x, y,
+        hp: def.hp,
+        maxHp: def.hp,
+        body: g,
+        barY,
+        bar,
+        phase: Math.random() * Math.PI * 2,
+        ai: def.ai || null,
+        cd: key === 'hen' ? 2.5 : (key === 'healer' ? 3 : 0.4),
+        removed: false,
+        dashSpeed: 520,
+        dashEnd: x + G.cell
+      };
+      unit.size = def.size;
+
+      // 母鸡专属：技能冷却环 + 读秒（纯视觉，不参与任何判定）
+      if (CD_DISPLAY[key] || (def.ai && def.ai !== "tank" && def.ai !== "bomber" && def.ai !== "charger")) {
+        unit.cdLabel = this.add.text(x, barY + 11, '', {
+          fontFamily: FONT, fontSize: '11px', color: '#8a5a2b', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(16).setVisible(false);
+        unit.wasCooling = unit.cd > 0.001;
+        this.updateCdLabel(unit);
+      }
+
+      this.units.push(unit);
+      this.syncBar(bar, 0, x, barY);
+
+      pushLog('🥚 放置 ' + def.name + ' → 第' + (row + 1) + '行 / 第' + (col + 1) + '列');
+    }
+
+    /* ---------------- 冷却读秒 UI（只读 u.cd，不改数值与判定） ---------------- */
+    updateCdLabel(u) {
+      if (!u || !u.cdLabel || !u.cdLabel.active) return;
+
+      const cooling = u.cd > 0.001;
+
+      if (cooling) {
+        // 血条下方一行暖棕小字，带一位小数
+        u.cdLabel.setText('冷却：' + u.cd.toFixed(1) + '秒');
+        u.cdLabel.setVisible(true);
+        if (u.body) u.body.setAlpha(0.72);          // 冷却中略微置灰（不压暗过头）
+      } else {
+        u.cdLabel.setVisible(false);
+        if (u.body) u.body.setAlpha(1);
+      }
+
+      // 冷却刚结束的一瞬间：一次微弱暖光
+      if (u.wasCooling && !cooling) {
+        u.wasCooling = false;
+        this.readyGlow(u);
+      } else if (cooling) {
+        u.wasCooling = true;
+      }
+    }
+
+    readyGlow(u) {
+      const ring = this.add.circle(u.x, u.y, (u.size || 84) / 2 - 2, 0xffe6a8, 0.22)
+        .setStrokeStyle(3, 0xffcf5c, 0.85).setDepth(14);
+      this.tweens.add({
+        targets: ring, scale: 1.6, alpha: 0, duration: 320, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+    }
+
+    /* ---------------- 新单位：治愈 / 炸弹 / 冲锋 ---------------- */
+    removeUnit(u) {
+      if (!u || u.removed) return;
+      u.removed = true;
+      this.units = this.units.filter((x) => x !== u);
+      if (u.body) u.body.destroy();
+      if (u.bar && u.bar.bg) {
+        u.bar.bg.destroy();
+        u.bar.fg.destroy();
+        u.bar.bg = null;
+      }
+      if (u.cdLabel) { u.cdLabel.destroy(); u.cdLabel = null; }
+    }
+
+    healAround(u, amount) {
+      let healed = 0;
+      for (const o of this.units) {
+        if (o === u || o.removed) continue;
+        if (Math.abs(o.row - u.row) > 1 || Math.abs(o.col - u.col) > 1) continue;
+        if (o.hp >= o.maxHp) continue;
+        o.hp = Math.min(o.maxHp, o.hp + amount);
+        this.setBarTarget(o.bar, o.hp, o.maxHp);
+        healed += 1;
+        this.flash(o.x, o.y - 26, '+' + amount, '#5fae7a');
+      }
+
+      const ring = this.add.circle(u.x, u.y, 38, 0xffffff, 0.10)
+        .setStrokeStyle(3, 0x7fd8a8, 0.9).setDepth(12);
+      this.tweens.add({
+        targets: ring, scale: 2.0, alpha: 0, duration: 460, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      if (healed) pushLog('💗 治愈母鸡回复 ' + healed + ' 个单位 +' + amount);
+    }
+
+    detonate(u, dmgArg) {
+      if (!u || u.removed) return;
+      const dmg = dmgArg || 140;
+      const cx = u.x;
+
+      const victims = this.enemies.filter((e) =>
+        Math.abs(e.row - u.row) <= 1 && Math.abs(e.x - cx) <= 180
+      );
+      victims.forEach((e) => this.damageEnemy(e, dmg));
+
+      const ring = this.add.circle(cx, u.y, 26, 0xfff1c9, 0.30)
+        .setStrokeStyle(4, 0xffb066, 0.9).setDepth(35);
+      this.tweens.add({
+        targets: ring, scale: 7, alpha: 0, duration: 440, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+
+      const core = this.add.circle(cx, u.y, 16, 0xffffff, 0.55).setDepth(36);
+      this.tweens.add({
+        targets: core, scale: 2.6, alpha: 0, duration: 260,
+        onComplete: () => core.destroy()
+      });
+
+      this.shatter(cx, u.y, 0x4a4a5a, 7, 30);
+      pushLog('💣 炸弹小鸡引爆 · 命中 ' + victims.length + ' 只公鸡');
+      this.removeUnit(u);
+    }
+
+    chargeBurst(u) {
+      const ring = this.add.circle(u.x, u.y, 16, 0xdfefff, 0.45)
+        .setStrokeStyle(3, 0x7fc4f0, 0.9).setDepth(30);
+      this.tweens.add({
+        targets: ring, scale: 2.4, alpha: 0, duration: 260,
+        onComplete: () => ring.destroy()
+      });
+      this.shatter(u.x, u.y, 0x7fc4f0, 5, 30);
+    }
+
+    /* ---------------- 血条 ---------------- */
+    makeBar(x, y, w) {
+      const bg = this.add.rectangle(x, y, w + 6, 9, 0x5c4326, 0.16);
+      const fg = this.add.rectangle(x - w / 2, y, w, 5, 0x7fd8a8).setOrigin(0, 0.5);
+      return { bg, fg, w, target: 1, shown: 1 };
+    }
+
+    setBarTarget(bar, hp, maxHp) {
+      bar.target = Phaser.Math.Clamp(hp / maxHp, 0, 1);
+    }
+
+    syncBar(bar, dt, x, y) {
+      if (!bar || !bar.bg || !bar.bg.active) return;
+      if (dt > 0) {
+        bar.shown += (bar.target - bar.shown) * Math.min(1, dt * 12);
+        if (Math.abs(bar.target - bar.shown) < 0.002) bar.shown = bar.target;
+      }
+      bar.bg.setPosition(x, y);
+      bar.fg.displayWidth = Math.max(0.01, bar.w * bar.shown);
+      bar.fg.setPosition(x - bar.w / 2, y);
+      bar.fg.fillColor = hpColor(bar.shown);
+    }
+
+    /* ---------------- 敌人 ---------------- */
+    spawnEnemy(rowArg, typeArg, xArg) {
+      const typeKey = typeArg || 'normal';
+      const t = ENEMY_TYPES[typeKey] || ENEMY_TYPES.normal;
+
+      const row = (typeof rowArg === 'number' && rowArg >= 0 && rowArg < G.rows)
+        ? rowArg
+        : Phaser.Math.Between(0, G.rows - 1);
+      const y = cellY(row);
+      const x = xArg || (CANVAS_W - 26);
+
+      const body = this.add.graphics();
+      drawRooster(body, t.w, t.h, t);
+      body.setPosition(x, y);
+
+      const barY = y - t.h / 2 - 26;
+      const bar = this.makeBar(x, barY, Math.max(56, t.w - 8));
+
+      const e = {
+        type: typeKey,
+        row, x, y,
+        hp: t.hp,
+        maxHp: t.hp,
+        attackCd: 0,
+        speed: t.speed,
+        w: t.w,
+        h: t.h,
+        peckDmg: t.peckDmg,
+        peckRate: t.peckRate,
+        shockEvery: t.shockEvery || 0,
+        shockDmg: t.shockDmg || 0,
+        dr: t.dr || 0,
+        slowResist: t.slowResist || 0,
+        poisonDmg: t.poisonDmg || 0,
+        rage: !!t.rage,
+        summonEvery: t.summonEvery || 0,
+        summonType: t.summonType || 'gale',
+        summonLeft: t.summonEvery || 0,
+        burnDmg: t.burnDmg || 0,
+        burnCd: t.burnCd || 0,
+        burnLeft: t.burnCd || 0,
+        flying: !!t.flying,
+        slowT: 0,
+        slowFactor: 1,
+        peckCount: 0,
+        body,
+        barY,
+        bar,
+        walkPhase: 0
+      };
+      this.enemies.push(e);
+      this.syncEnemy(e);
+      this.syncBar(bar, 0, x, barY);
+
+      pushLog('🦃 第' + (this.waveIndex + 1) + '波 · 第' + (row + 1) + '行 ｜ ' + t.name +
+        ' HP ' + t.hp);
+    }
+
+    syncEnemy(e) {
+      e.body.setPosition(e.x, e.y);
+    }
+
+    findBlocker(e) {
+      let best = null;
+      for (const u of this.units) {
+        if (u.row !== e.row) continue;
+        const gap = e.x - u.x;
+        const reach = 46 + (e.w || 70) / 2;
+        if (gap <= reach && gap >= -50) {
+          if (!best || u.x > best.x) best = u;
+        }
+      }
+      return best;
+    }
+
+    damageEnemy(e, dmg) {
+      const real = e.dr ? dmg * (1 - e.dr) : dmg;   // 铁盔 30% 减伤
+      e.hp -= real;
+
+      if (e.hp <= 0) {
+        this.enemies = this.enemies.filter((x) => x !== e);
+        e.bar.bg.destroy();
+        e.bar.fg.destroy();
+        e.bar.bg = null;
+        this.shatter(e.x, e.y, 0xff6a4d, 7, 30);
+        this.tweens.add({
+          targets: e.body, alpha: 0, scaleX: 1.2, scaleY: 1.2, duration: 200,
+          onComplete: () => e.body.destroy()
+        });
+        pushLog('💥 公鸡倒下 第' + (e.row + 1) + '行');
+      } else {
+        this.setBarTarget(e.bar, e.hp, e.maxHp);
+        this.hitFlash(e.x, e.y, (e.w || 70) * 0.9, (e.h || 82) * 0.9);
+        this.tweens.add({ targets: e.body, scaleX: 1.08, scaleY: 0.94, duration: 70, yoyo: true });
+        pushLog('🎯 命中 第' + (e.row + 1) + '行 ｜ -' + dmg + ' → 剩余 ' + Math.max(0, e.hp));
+      }
+    }
+
+    damageUnit(u, dmg, attacker) {
+      const red = this.shieldReduceFor(u);          // 盾卫光环：相邻友军减伤
+      if (red > 0) dmg = dmg * (1 - red);
+      u.hp -= dmg;
+
+      if (u.hp <= 0) {
+        u.removed = true;
+        this.units = this.units.filter((x) => x !== u);
+        u.bar.bg.destroy();
+        u.bar.fg.destroy();
+        u.bar.bg = null;
+        if (u.cdLabel) { u.cdLabel.destroy(); u.cdLabel = null; }
+
+        const color = (UNIT_DEFS[u.key] && UNIT_DEFS[u.key].color) || 0xffd8a8;
+        this.shatter(u.x, u.y, color, u.key === 'rock' ? 9 : 6, 30);
+        this.tweens.add({
+          targets: u.body, alpha: 0, scaleX: 1.15, scaleY: 1.15, duration: 180,
+          onComplete: () => u.body.destroy()
+        });
+        this.flash(u.x, u.y - 20, '碎了！', '#d9673f');
+        pushLog('💔 ' + UNIT_DEFS[u.key].name + ' 被啄碎（第' + (u.row + 1) + '行）');
+      } else {
+        this.setBarTarget(u.bar, u.hp, u.maxHp);
+        this.tweens.add({ targets: u.body, alpha: 0.5, duration: 60, yoyo: true });
+
+        // 重甲反伤：被啃时反弹伤害给公鸡
+        if (u.key === 'reflector' && attacker && attacker.hp > 0) {
+          const reflect = 25;
+          this.damageEnemy(attacker, reflect);
+          this.flash(attacker.x, attacker.y - 34, '-' + reflect, '#8e3b8e');
+          const ring = this.add.circle(u.x, u.y, 26, 0xe0d4ff, 0.30)
+            .setStrokeStyle(3, 0x7f6aa8, 0.9).setDepth(22);
+          this.tweens.add({
+            targets: ring, scale: 1.8, alpha: 0, duration: 280,
+            onComplete: () => ring.destroy()
+          });
+          pushLog('🛡 反伤 -' + reflect + ' → 公鸡剩余 ' + Math.max(0, attacker.hp));
+        }
+      }
+    }
+
+    giantShock(e) {
+      const victims = this.units.filter((u) =>
+        !u.removed && Math.abs(u.row - e.row) <= 1 && Math.abs(u.x - e.x) <= 180
+      );
+      victims.forEach((u) => this.damageUnit(u, e.shockDmg, null));
+
+      const ring = this.add.circle(e.x, e.y, 40, 0xe0c8ff, 0.16)
+        .setStrokeStyle(4, 0x8e5bb5, 0.75).setDepth(28);
+      this.tweens.add({
+        targets: ring, scale: 4.2, alpha: 0, duration: 520, ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy()
+      });
+      pushLog('💥 ' + ENEMY_TYPES[e.type].name + ' 震慑 · 命中 ' + victims.length + ' 个单位');
+    }
+
+    /* ---------------- 子弹 ---------------- */
+    fireBullet(u, dmg, speed, radius, extra) {
+      const damage = dmg || 26;
+      const spd = speed || 430;
+      const r = radius || 7.5;
+      const x = u.x + 36;
+      const glow = this.add.circle(x, u.y, r + 5, 0xffd08a, 0.26).setDepth(16);
+      const core = this.add.circle(x, u.y, r, 0xfff6e0).setStrokeStyle(2, 0xffa94d).setDepth(17);
+      this.bullets.push({
+        x, y: u.y, row: u.row, speed: spd, dmg: damage, core, glow, t: 0,
+        slow: (extra && extra.slow) || 0,
+        slowTime: (extra && extra.slowTime) || 0
+      });
+    }
+
+    nearestEnemyInRange(u, range) {
+      let best = null;
+      for (const e of this.enemies) {
+        if (e.row !== u.row) continue;
+        if (e.x <= u.x + 10) continue;
+        if (e.x - u.x > range) continue;
+        if (!best || e.x < best.x) best = e;
+      }
+      return best;
+    }
+
+    nearestEnemyAhead(u) {
+      let best = null;
+      for (const e of this.enemies) {
+        if (e.row !== u.row) continue;
+        if (e.x <= u.x + 10) continue;
+        if (!best || e.x < best.x) best = e;
+      }
+      return best;
+    }
+
+    removeBullet(b) {
+      b.core.destroy();
+      b.glow.destroy();
+      this.bullets = this.bullets.filter((x) => x !== b);
+    }
+
+    /* ---------------- 鸡窝基地血量 ---------------- */
+    damageBase(dmg) {
+      if (this.over || this.baseHp <= 0) return;
+      this.baseHp = Math.max(0, this.baseHp - dmg);
+      this.updateBaseHp();
+      this.flash(78, G.y0 + GRID_H / 2 + 58, '-' + dmg, '#d9673f');
+      pushLog('🏠 鸡窝被啄 -' + dmg + ' → 剩余 ' + this.baseHp);
+
+      if (this.baseHp <= 0) this.gameOver();
+    }
+
+    updateBaseHp() {
+      if (!this.baseBarFg) return;
+      const ratio = Phaser.Math.Clamp(this.baseHp / BASE.hp, 0, 1);
+      this.baseBarFg.displayWidth = Math.max(0.01, 64 * ratio);
+      this.baseBarFg.fillColor = hpColor(ratio);
+      if (this.baseHpText) this.baseHpText.setText(String(this.baseHp));
+    }
+
+    /* ---------------- 掉落玉米粒 ---------------- */
+    dropCorn(x, y0, targetY, life, owner) {
+      const glow = this.add.circle(x, y0, 27, 0xfff0b8, 0.20).setDepth(18);
+      const main = this.add.circle(x, y0, 15, 0xffd54a).setStrokeStyle(3, 0xe0a800).setDepth(20);
+      const hi = this.add.circle(x - 5, y0 - 5, 4, 0xfff2b0).setDepth(21);
+      // 视觉半径 15 不变；点击热区放大到半径 40（直径 80px），更好点中
+      main.setInteractive({
+        hitArea: new Phaser.Geom.Circle(15, 15, 40),
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+        useHandCursor: true
+      });
+
+      const d = {
+        x, y: y0, vy: 0, targetY, life, main, hi, glow,
+        owner: owner || null, alive: true,
+        phase: Math.random() * Math.PI * 2,
+        landed: false,
+        settling: false,
+        autoLeft: null          // 落地后才开始倒计时
+      };
+
+      main.on('pointerdown', (pointer, lx, ly, event) => {
+        if (event && event.stopPropagation) event.stopPropagation();
+        this.collectCorn(d);
+      });
+
+      this.drops.push(d);
+    }
+
+    removeDrop(d) {
+      if (!d.alive) return;
+      d.alive = false;
+      d.main.destroy();
+      d.hi.destroy();
+      this.drops = this.drops.filter((x) => x !== d);
+    }
+
+    collectCorn(d) {
+      // 点任意一颗 = 全场一起收
+      if (!this.drops.length) return;
+      const all = this.drops.slice();
+      let total = 0;
+      all.forEach((one) => {
+        if (!one.alive) return;
+        total += 1;
+        this.collectOne(one);
+      });
+      if (total > 1) pushLog('🌽 一键全收 · ' + total + ' 颗');
+    }
+
+    collectOne(d) {
+      if (!d.alive) return;
+      this.corn += 25;
+      this.refreshHud();
+      this.sparkle(d.x, d.y);
+
+      // 玉米粒飞向右上角数字
+      const fly = this.add.circle(d.main.x, d.main.y, 12, 0xffd54a)
+        .setStrokeStyle(2, 0xe0a800).setDepth(45);
+      this.tweens.add({
+        targets: fly,
+        x: CANVAS_W - 40, y: 26, scale: 0.4, alpha: 0.95,
+        duration: 430, ease: 'Cubic.easeIn',
+        onComplete: () => { fly.destroy(); this.pulseCorn(); }
+      });
+
+      // 轻快的缩小消失反馈
+      d.alive = false;
+      this.drops = this.drops.filter((x) => x !== d);
+      this.tweens.add({
+        targets: [d.main, d.hi, d.glow],
+        scale: 0.15, alpha: 0,
+        duration: 150, ease: 'Back.easeIn',
+        onComplete: () => { d.main.destroy(); d.hi.destroy(); d.glow.destroy(); }
+      });
+
+      pushLog('🌽 拾取玉米粒 +25 → 当前 ' + this.corn);
+    }
+
+    pulseCorn() {
+      const el = document.getElementById('corn-val');
+      if (!el) return;
+      el.classList.remove('pulse');
+      void el.offsetWidth;
+      el.classList.add('pulse');
+    }
+
+    dropSkyCorn() {
+      const x = Phaser.Math.Between(G.x0 + 50, G.x0 + GRID_W - 50);
+      const targetY = Phaser.Math.Between(G.y0 + 50, G.y0 + GRID_H - 50);
+      this.dropCorn(x, -30, targetY, 9, null);
+    }
+
+    dropHenCorn(u) {
+      const owned = this.drops.filter((d) => d.owner === u).length;
+      if (owned >= 3) return;
+      this.dropCorn(u.x, u.y - 46, u.y - 76, 8, u);
+    }
+
+    /* ---------------- 公鸡来袭预警 ---------------- */
+    showSpawnWarning(row) {
+      const y = cellY(row);
+
+      // 红光闪烁（3 秒，跟着出兵倒计时一起呼吸）
+      const halo = this.add.graphics().setDepth(9);
+      halo.fillStyle(0xd89b5a, 0.28);
+      halo.fillEllipse(0, 0, 96, 108);
+      halo.lineStyle(4, 0xb97a3c, 0.7);
+      halo.strokeEllipse(0, 0, 96, 108);
+      halo.setPosition(this.gateCenterX || (CANVAS_W - 46), y);
+
+      this.tweens.add({
+        targets: halo,
+        alpha: 0.25, scaleX: 1.14, scaleY: 1.14,
+        duration: 300, yoyo: true, repeat: 4, ease: 'Sine.easeInOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: halo, alpha: 0, duration: 180,
+            onComplete: () => halo.destroy()
+          });
+        }
+      });
+
+      const tip = this.add.text(this.gateCenterX || (CANVAS_W - 46), y - 66, '公鸡来袭 3s', {
+        fontFamily: FONT, fontSize: '19px', color: '#8a5a2b', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(10);
+
+      this.tweens.add({
+        targets: tip, alpha: 0.35,
+        duration: 300, yoyo: true, repeat: 4,
+        onComplete: () => {
+          this.tweens.add({
+            targets: tip, y: y - 84, alpha: 0, duration: 180,
+            onComplete: () => tip.destroy()
+          });
+        }
+      });
+
+      pushLog('⚠ 预警：第' + (row + 1) + '行即将出鸡');
+    }
+
+    /* ---------------- 新手引导 ---------------- */
+    showStory() {
+      this.paused = true;
+
+      const items = [];
+      const dim = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.45).setDepth(90);
+
+      const card = this.add.graphics().setDepth(91);
+      card.fillStyle(0x5c4326, 0.18);
+      card.fillRoundedRect(258, 158, 776, 328, 30);
+      card.fillStyle(0xfffdf6, 0.98);
+      card.fillRoundedRect(252, 150, 776, 328, 30);
+      card.lineStyle(3, 0xffcf5c, 1);
+      card.strokeRoundedRect(252, 150, 776, 328, 30);
+
+      const title = this.add.text(640, 202, '🌽 玉米村告急', {
+        fontFamily: FONT, fontSize: '34px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(92);
+
+      const body = this.add.text(640, 292, '公鸡军团来袭了！\n玉米村陷入危机，母鸡们需要你的指挥！', {
+        fontFamily: FONT, fontSize: '25px', color: '#7b6650',
+        align: 'center', lineSpacing: 14, wordWrap: { width: 640 }
+      }).setOrigin(0.5).setDepth(92);
+
+      const btnG = this.add.graphics().setDepth(92);
+      btnG.fillStyle(0xffcf5c, 1);
+      btnG.fillRoundedRect(520, 392, 240, 60, 30);
+
+      const btnT = this.add.text(CANVAS_W / 2, CANVAS_H / 2 + 86, '开始保卫', {
+        fontFamily: FONT, fontSize: '24px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(93);
+
+      const hit = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2 + 86, 240, 60, 0xffffff, 0.001)
+        .setDepth(94).setInteractive({ useHandCursor: true });
+
+      items.push(dim, card, title, body, btnG, btnT, hit);
+
+      hit.on('pointerdown', (p, x, y, ev) => {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        if (this.storyClosed) return;
+        this.storyClosed = true;
+        items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+        pushLog('📖 开场剧情已关闭');
+        this.openDeck();
+      });
+
+      pushLog('📖 开场剧情弹出（游戏已暂停）');
+    }
+
+    showToast(text) {
+      const t = this.add.text(640, 64, text, {
+        fontFamily: FONT, fontSize: '22px', color: '#8a5a2b', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(60).setAlpha(0);
+
+      this.tweens.add({ targets: t, alpha: 1, y: 80, duration: 380, ease: 'Cubic.easeOut' });
+      this.time.delayedCall(2600, () => {
+        this.tweens.add({
+          targets: t, alpha: 0, y: 62, duration: 420, ease: 'Cubic.easeIn',
+          onComplete: () => t.destroy()
+        });
+      });
+    }
+
+    burnAround(e) {
+      let n = 0;
+      const list = this.units.slice();
+      for (const u of list) {
+        if (u.removed) continue;
+        if (Math.abs(u.row - e.row) > 1) continue;
+        if (Math.abs(u.x - e.x) > 110) continue;
+        this.damageUnit(u, e.burnDmg, e);
+        n += 1;
+      }
+      if (!n) return;
+
+      const ring = this.add.circle(e.x, e.y, 34, 0xffb066, 0.20)
+        .setStrokeStyle(3, 0xff7a3c, 0.85).setDepth(26);
+      this.tweens.add({ targets: ring, scale: 1.8, alpha: 0, duration: 320,
+        onComplete: () => ring.destroy() });
+    }
+
+    /* ---------------- 光环：号角攻速 / 盾卫减伤 ---------------- */
+    hasteFor(u) {
+      for (const o of this.units) {
+        if (o.removed || o.key !== 'horn') continue;
+        if (Math.abs(o.row - u.row) <= 1 && Math.abs(o.col - u.col) <= 1) return o.haste || 0.8;
+      }
+      return 1;
+    }
+
+    shieldReduceFor(u) {
+      for (const o of this.units) {
+        if (o.removed || o.key !== 'shield') continue;
+        if (Math.abs(o.row - u.row) <= 1 && Math.abs(o.col - u.col) <= 1) {
+          return UNIT_DEFS.shield.shieldReduce;
+        }
+      }
+      return 0;
+    }
+
+    chainLightning(u, first) {
+      const def = UNIT_DEFS[u.key] || UNIT_DEFS.storm;
+      const hit = [first];
+      let last = first;
+
+      for (let i = 0; i < def.chain; i++) {
+        let next = null;
+        for (const e of this.enemies) {
+          if (hit.indexOf(e) >= 0) continue;
+          const d = Math.abs(e.x - last.x) + Math.abs(e.row - last.row) * 60;
+          if (d <= def.chainRange && (!next || d < Math.abs(next.x - last.x))) next = e;
+        }
+        if (!next) break;
+        hit.push(next);
+        last = next;
+      }
+
+      const g = this.add.graphics().setDepth(29);
+      let prev = { x: u.x, y: u.y };
+      hit.forEach((e) => {
+        g.lineStyle(3, 0xd8b6ff, 0.9);
+        g.lineBetween(prev.x, prev.y, e.x, e.y);
+        g.lineStyle(1.5, 0xffffff, 0.85);
+        g.lineBetween(prev.x, prev.y, e.x, e.y);
+        prev = { x: e.x, y: e.y };
+        this.damageEnemy(e, def.dmg);
+      });
+
+      this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
+      pushLog('⚡ 闪电母鸡连锁 ' + hit.length + ' 只');
+    }
+
+    /* ---------------- 开局选牌（卡组 10 只） ---------------- */
+    deckStorageKey() { return 'eggwar_deck_v1'; }
+    bestWaveKey() { return 'eggwar_best_wave_v1'; }
+
+    loadDeck() {
+      try {
+        const raw = localStorage.getItem(this.deckStorageKey());
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr.filter((k) => UNIT_DEFS[k]).slice(0, 10);
+      } catch (e) { return []; }
+    }
+
+    saveDeck(arr) {
+      try { localStorage.setItem(this.deckStorageKey(), JSON.stringify(arr)); } catch (e) { /* ignore */ }
+    }
+
+    unlockedWave() {
+      const cur = this.waveIndex + 1;
+      let best = 1;
+      try { best = parseInt(localStorage.getItem(this.bestWaveKey()) || '1', 10) || 1; } catch (e) { /* ignore */ }
+      return Math.max(cur, best, 1);
+    }
+
+    openDeck() {
+      this.deckPicking = true;
+      this.paused = true;
+      this.selected = null;
+      this.shovel = false;
+      this.syncCards();
+      this.syncTools();
+      this.renderDeck();
+      const el = document.getElementById('deck-screen');
+      if (el) el.hidden = false;
+    }
+
+    closeDeck() {
+      this.deckPicking = false;
+      const el = document.getElementById('deck-screen');
+      if (el) el.hidden = true;
+    }
+
+    renderDeck() {
+      const grid = document.getElementById('deck-grid');
+      const countEl = document.getElementById('deck-count');
+      const startBtn = document.getElementById('deck-start');
+      if (!grid) return;
+
+      const unlocked = this.unlockedWave();
+      const picked = this.deck || [];
+      grid.innerHTML = '';
+
+      Object.keys(UNIT_DEFS).forEach((key) => {
+        const def = UNIT_DEFS[key];
+        const need = def.unlock || 1;
+        const locked = need > unlocked;
+        const on = picked.indexOf(key) >= 0;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'deck-card' + (on ? ' sel' : '') + (locked ? ' lock' : '');
+        btn.dataset.key = key;
+
+        const ico = document.createElement('span');
+        const look = UNIT_LOOK[key] || ['round', 'M'];
+        ico.className = 'dc-ico shape-' + look[0];
+        ico.style.background = '#' + def.color.toString(16).padStart(6, '0');
+
+        const nm = document.createElement('span');
+        nm.className = 'dc-name';
+        nm.textContent = def.name;
+
+        const cost = document.createElement('span');
+        cost.className = 'dc-cost';
+        cost.textContent = locked ? ('第 ' + need + ' 波解锁') : (def.cost + ' 玉米');
+
+        btn.appendChild(ico);
+        btn.appendChild(nm);
+        btn.appendChild(cost);
+        if (!locked) btn.addEventListener('click', () => this.toggleDeckPick(key));
+
+        grid.appendChild(btn);
+      });
+
+      if (countEl) countEl.textContent = '已选 ' + picked.length + ' / 10';
+      if (startBtn) startBtn.disabled = picked.length !== 10;
+    }
+
+    toggleDeckPick(key) {
+      if (!this.deckPicking) return;
+      const idx = this.deck.indexOf(key);
+      if (idx >= 0) this.deck.splice(idx, 1);
+      else if (this.deck.length < 10) this.deck.push(key);
+      else this.showToast('卡组已满 10 只，先取消一只');
+      this.renderDeck();
+    }
+
+    clearDeck() {
+      if (!this.deckPicking) return;
+      this.deck = [];
+      this.renderDeck();
+    }
+
+    confirmDeck() {
+      if (!this.deckPicking) return;
+      if (this.deck.length !== 10) { this.showToast('请选满 10 只'); return; }
+
+      this.saveDeck(this.deck);
+      this.closeDeck();
+      this.paused = false;
+      this.state = 'PREPARING';
+      this.buildCards();          // 只渲染这 10 只
+      this.refreshHud();
+      this.startPrep();
+      this.showToast('卡组已就绪，布置母鸡军团！');
+    }
+
+    /* ---------------- 铲子（移除单位，返还 30% 费用） ---------------- */
+    toggleShovel() {
+      if (this.over || this.paused) return;
+      this.shovel = !this.shovel;
+      this.selected = null;      // 与卡牌互斥
+      this.syncCards();
+      this.syncTools();
+      if (this.shovel) this.showToast('铲子已选中：点击场上单位即可移除');
+    }
+
+    digUnit(u) {
+      const def = UNIT_DEFS[u.key] || { cost: 0, name: '单位' };
+      const refund = Math.floor((def.cost || 0) * 0.3);
+
+      this.shatter(u.x, u.y, 0xffe6a8, 7, 30);
+      this.flash(u.x, u.y - 24, '返还 ' + refund + ' 玉米', '#c9842a');
+      this.removeUnit(u);
+
+      if (refund > 0) {
+        this.corn += refund;
+        this.refreshHud();
+      }
+
+      this.shovel = false;
+      this.syncTools();
+      this.syncCards();
+      pushLog('🧹 铲除 ' + def.name + '，返还 ' + refund);
+    }
+
+    /* ---------------- 倍速 ---------------- */
+    toggleSpeed() {
+      if (this.over || this.paused) return;
+      this.speedScale = this.speedScale === 1 ? 2 : 1;
+      this.syncTools();
+      this.showToast(this.speedScale === 2 ? '2 倍速' : '恢复 1 倍速');
+    }
+
+    syncTools() {
+      const sh = document.getElementById('shovel-btn');
+      const sp = document.getElementById('speed-btn');
+      if (sh) sh.classList.toggle('sel', !!this.shovel);
+      if (sp) {
+        sp.textContent = (this.speedScale || 1) + '×';
+        sp.classList.toggle('sel', (this.speedScale || 1) > 1);
+      }
+    }
+
+    /* ---------------- 波次横幅 ---------------- */
+    showWaveBanner(text, big) {
+      const t = this.add.text(CANVAS_W / 2, 74, text, {
+        fontFamily: FONT, fontSize: big ? '34px' : '26px',
+        color: '#b35a1f', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(72).setAlpha(0).setScale(0.86)
+        .setShadow(0, 2, '#ffffff', 10);
+
+      this.tweens.add({ targets: t, alpha: 1, scale: 1, duration: 260, ease: 'Back.easeOut' });
+      this.time.delayedCall(1500, () => {
+        this.tweens.add({
+          targets: t, alpha: 0, y: 52, duration: 420, ease: 'Cubic.easeIn',
+          onComplete: () => t.destroy()
+        });
+      });
+    }
+
+    /* ---------------- 卡槽种植冷却 ---------------- */
+    startCardCooldown(key) {
+      const secs = PLANT_CD[key] || 0;
+      if (secs <= 0) return;
+      this.plantCd[key] = secs;
+      this.renderCardCooldown(key, secs, secs);
+      this.syncCards();
+    }
+
+    renderCardCooldown(key, left, total) {
+      const bar = document.getElementById('card-bar');
+      if (!bar) return;
+      const btn = bar.querySelector('.card[data-key="' + key + '"]');
+      if (!btn) return;
+
+      const mask = btn.querySelector('.card-mask');
+      const txt = btn.querySelector('.card-cd');
+      const frac = Math.max(0, Math.min(1, left / (total || 1)));
+
+      if (mask) mask.style.height = (frac * 100).toFixed(1) + '%';
+      if (txt) txt.textContent = left > 0 ? left.toFixed(1) + 's' : '';
+    }
+
+    updateCardCooldowns(dt) {
+      const keys = Object.keys(this.plantCd);
+      let anyFinished = false;
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const left = this.plantCd[key];
+        if (left <= 0) continue;
+
+        const total = PLANT_CD[key] || 1;
+        const next = Math.max(0, left - dt);
+        this.plantCd[key] = next;
+        this.renderCardCooldown(key, next, total);
+
+        if (next <= 0) {
+          anyFinished = true;
+          const bar = document.getElementById('card-bar');
+          const btn = bar && bar.querySelector('.card[data-key="' + key + '"]');
+          if (btn) {
+            btn.classList.remove('cooling', 'locked');
+            btn.classList.add('glow');
+            setTimeout(function () { btn.classList.remove('glow'); }, 480);
+          }
+        }
+      }
+
+      if (anyFinished) this.syncCards();
+    }
+
+    /* ---------------- 波次系统 ---------------- */
+    buildQueue(cfg) {
+      const list = [];
+      Object.keys(cfg).forEach((k) => {
+        if (k === 'interval' || k === 'prep' || k === 'boss') return;
+        const n = cfg[k] || 0;
+        for (let i = 0; i < n; i++) list.push(k);
+      });
+
+      // 打乱（巨型留在最后，避免开局撞 BOSS）
+      const normalish = list.filter((k) => k !== 'giant');
+      const bosses = list.filter((k) => k === 'giant');
+      for (let i = normalish.length - 1; i > 0; i--) {
+        const j = Phaser.Math.Between(0, i);
+        const t = normalish[i]; normalish[i] = normalish[j]; normalish[j] = t;
+      }
+      return normalish.concat(bosses);
+    }
+
+    startPrep() {
+      const cfg = WAVES[this.waveIndex];
+      try {
+        const best = parseInt(localStorage.getItem(this.bestWaveKey()) || '1', 10) || 1;
+        if (this.waveIndex + 1 > best) localStorage.setItem(this.bestWaveKey(), String(this.waveIndex + 1));
+      } catch (e) { /* ignore */ }
+      this.state = 'PREPARING';
+      this.over = false;
+      this.paused = false;
+      this.prepLeft = cfg.prep;
+      this.pendingRow = null;
+      this.spawnTimer = 0;
+      this.waveQueue = this.buildQueue(cfg);
+
+      this.setPrepLine('第 ' + (this.waveIndex + 1) + ' 波 · 准备 ' + Math.ceil(this.prepLeft) + 's');
+      pushLog('📦 第 ' + (this.waveIndex + 1) + ' 波准备 · 敌方 ' + this.waveQueue.length + ' 只');
+    }
+
+    startFighting() {
+      this.state = 'FIGHTING';
+      this.spawnTimer = 0.8;
+      this.setPrepLine(null);
+      this.showWaveBanner('一大波公鸡来袭！', this.waveIndex >= 3);   // 第 4/5 波放大字号
+      pushLog('⚔ 第 ' + (this.waveIndex + 1) + ' 波开战！');
+    }
+
+    updateSpawner(dt) {
+      if (!this.waveQueue.length) return;
+
+      this.spawnTimer -= dt;
+      if (this.pendingRow === null && this.spawnTimer <= 3) {
+        this.pendingRow = Phaser.Math.Between(0, G.rows - 1);
+        this.showSpawnWarning(this.pendingRow);
+      }
+
+      if (this.spawnTimer <= 0) {
+        const type = this.waveQueue.shift();
+        this.spawnEnemy(this.pendingRow, type);
+        this.pendingRow = null;
+        this.spawnTimer = WAVES[this.waveIndex].interval;
+      }
+    }
+
+    checkWaveClear() {
+      if (this.over || this.state !== 'FIGHTING') return;
+      if (this.waveQueue.length > 0) return;
+      if (this.enemies.length > 0) return;
+
+      this.state = 'WIN';
+      this.paused = true;               // 冻结主循环，防止结算时还在跑
+      const last = this.waveIndex >= WAVES.length - 1;
+      pushLog(last ? '🏆 第 5 波清空，全部通关' : '🎉 第 ' + (this.waveIndex + 1) + ' 波清空');
+
+      this.showEndModal({
+        title: last ? '🏆 玉米村保卫战大获全胜！' : '🎉 胜利！',
+        body: last ? '公鸡军团彻底撤退，玉米村安全了！' : '公鸡军团暂时撤退了。',
+        button: last ? '再玩一局' : '进入第 ' + (this.waveIndex + 2) + ' 波',
+        onClose: last ? null : () => {
+          this.waveIndex += 1;
+          this.startPrep();             // 切回准备阶段 15 秒
+        }
+      });
+    }
+
+    showEndModal(opts) {
+      this.over = true;
+      this.paused = true;
+      this.selected = null;
+      this.syncCards();
+      if (this.hoverCell) this.hoverCell.setVisible(false);
+      this.setPrepLine(null);
+
+      const items = [];
+      const dim = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x5c4326, 0.55).setDepth(100);
+
+      const card = this.add.graphics().setDepth(101);
+      card.fillStyle(0xfffdf6, 0.98);
+      const cardW = Math.min(640, CANVAS_W - 80);
+      const cardH = 316;
+      const cardX = CANVAS_W / 2 - cardW / 2;
+      const cardY = CANVAS_H / 2 - cardH / 2;
+      card.fillRoundedRect(cardX, cardY, cardW, cardH, 28);
+      card.lineStyle(3, 0xffcf5c, 1);
+      card.strokeRoundedRect(cardX, cardY, cardW, cardH, 28);
+
+      const title = this.add.text(640, 232, opts.title, {
+        fontFamily: FONT, fontSize: '33px', color: '#5c4326', fontStyle: 'bold',
+        align: 'center', wordWrap: { width: 580 }
+      }).setOrigin(0.5).setDepth(102);
+
+      const body = this.add.text(640, 320, opts.body, {
+        fontFamily: FONT, fontSize: '24px', color: '#7b6650', align: 'center',
+        wordWrap: { width: 560 }, lineSpacing: 10
+      }).setOrigin(0.5).setDepth(102);
+
+      const btnG = this.add.graphics().setDepth(102);
+      btnG.fillStyle(0xffcf5c, 1);
+      btnG.fillRoundedRect(510, 390, 260, 60, 30);
+
+      const btnT = this.add.text(640, 420, opts.button, {
+        fontFamily: FONT, fontSize: '24px', color: '#5c4326', fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(103);
+
+      const hit = this.add.rectangle(640, 420, 260, 60, 0xffffff, 0.001)
+        .setDepth(104).setInteractive({ useHandCursor: true });
+
+      items.push(dim, card, title, body, btnG, btnT, hit);
+
+      // 失败时提供「重新选牌」
+      if (opts.secondary) {
+        const btn2 = this.add.graphics().setDepth(102);
+        btn2.fillStyle(0xfff3d8, 1);
+        btn2.fillRoundedRect(430, 466, 180, 46, 23);
+        btn2.lineStyle(2, 0xffcf5c, 1);
+        btn2.strokeRoundedRect(430, 466, 180, 46, 23);
+
+        const t2 = this.add.text(520, 489, opts.secondary.label, {
+          fontFamily: FONT, fontSize: '19px', color: '#6b4a22', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(103);
+
+        const h2 = this.add.rectangle(520, 489, 180, 46, 0xffffff, 0.001)
+          .setDepth(104).setInteractive({ useHandCursor: true });
+
+        h2.on('pointerdown', (p, x, y, ev) => {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+          t2.destroy(); h2.destroy(); btn2.destroy();
+          opts.secondary.onClick();
+        });
+
+        items.push(btn2, t2, h2);
+      }
+
+      hit.on('pointerdown', (p, x, y, ev) => {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        items.forEach((o) => { if (o && o.destroy) o.destroy(); });
+        if (opts.onClose) {
+          this.over = false;
+          this.paused = false;
+          opts.onClose();
+        } else {
+          this.scene.restart();
+        }
+      });
+    }
+
+    /* ---------------- 帧更新 ---------------- */
+    update(time, delta) {
+      if (this.over || this.paused) return;
+      const dt = (Math.min(delta, 120) / 1000) * (this.speedScale || 1);
+      this.clock += dt;
+
+      // 状态机：准备 / 战斗
+      if (this.state === 'PREPARING') {
+        this.prepLeft -= dt;
+        this.setPrepLine('第 ' + (this.waveIndex + 1) + ' 波 · 准备 ' +
+          Math.ceil(Math.max(0, this.prepLeft)) + 's');
+        if (this.prepLeft <= 0) this.startFighting();
+      } else if (this.state === 'FIGHTING') {
+        this.updateSpawner(dt);
+        this.updateCardCooldowns(dt);   // 准备阶段/弹窗/结算时冻结
+      }
+
+      // 天上掉玉米粒：频率小幅提高（2.6~4.2 秒一颗）
+      this.timers.corn -= dt;
+      if (this.timers.corn <= 0) {
+        this.dropSkyCorn();
+        this.timers.corn = 2.6 + Math.random() * 1.6;
+      }
+
+      this.updateUnits(dt);
+      this.updateEnemies(dt);
+      this.updateBullets(dt);
+      this.updateDrops(dt);
+
+      // 本波清空判定：存活 0 且待刷队列 0
+      this.checkWaveClear();
+    }
+
+    updateUnits(dt) {
+      for (const u of this.units.slice()) {
+        if (u.removed) continue;
+        this.syncBar(u.bar, dt, u.x, u.barY);
+
+        // 待机轻微上下浮动，让画面有呼吸感
+        u.body.y = u.y + Math.sin(this.clock * 2.2 + u.phase) * 1.6;
+
+        // 中毒持续伤害（每只单位独立计时，不串台）
+        if (u.venomT > 0) {
+          u.venomT -= dt;
+          u.hp -= u.venomDps * dt;
+          this.setBarTarget(u.bar, Math.max(0, u.hp), u.maxHp);
+          if (u.hp <= 0) { this.damageUnit(u, 0.01, null); continue; }
+        }
+
+        const haste = this.hasteFor(u);
+
+        if (u.key === 'sniper') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            if (this.nearestEnemyAhead(u)) {
+              this.fireBullet(u);
+              u.cd = 1.2;
+            } else {
+              u.cd = 0;
+            }
+          }
+        } else if (u.key === 'hen') {
+          u.cd -= dt;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            this.dropHenCorn(u);
+            u.cd = 5;
+          }
+        } else if (u.key === 'gunner') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const target = this.nearestEnemyInRange(u, G.cell * 3);
+            if (target) {
+              this.fireBullet(u, 10, 640, 6);
+              u.cd = 0.6;
+            } else {
+              u.cd = 0;
+            }
+          }
+        } else if (u.key === 'ice') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) {
+              this.fireBullet(u, UNIT_DEFS.ice.dmg, 470, 8, { slow: UNIT_DEFS.ice.slow, slowTime: UNIT_DEFS.ice.slowTime });
+              u.cd = UNIT_DEFS.ice.atkCd;
+            } else { u.cd = 0; }
+          }
+        } else if (u.key === 'storm') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) { this.chainLightning(u, tgt); u.cd = UNIT_DEFS.storm.atkCd; }
+            else { u.cd = 0; }
+          }
+        } else if (u.key === 'cannon') {
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) { this.fireBullet(u, UNIT_DEFS.cannon.dmg, 540, 10); u.cd = UNIT_DEFS.cannon.atkCd; }
+            else { u.cd = 0; }
+          }
+        } else if (u.key === 'healer') {
+          u.cd -= dt;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            u.cd = 3;
+            this.healAround(u, 10);
+          }
+        } else if (u.key === 'bomber') {
+          const near = this.enemies.find((e) =>
+            e.row === u.row && Math.abs(e.x - u.x) <= 118
+          );
+          if (near) this.detonate(u);
+        } else if (u.key === 'charger') {
+          u.x += u.dashSpeed * dt;
+          u.body.x = u.x;
+
+          let hit = null;
+          for (const e of this.enemies) {
+            if (e.row !== u.row) continue;
+            if (Math.abs(e.x - u.x) <= 42) { hit = e; break; }
+          }
+
+          if (hit) {
+            this.damageEnemy(hit, 120);
+            this.chargeBurst(u);
+            this.removeUnit(u);
+          } else if (u.x >= u.dashEnd) {
+            this.chargeBurst(u);
+            this.removeUnit(u);
+          }
+        } else if (u.ai === 'ranged') {
+          const def = UNIT_DEFS[u.key];
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const rng = def.range ? def.range * G.cell : 99999;
+            const tgt = this.nearestEnemyInRange(u, rng);
+            if (tgt) {
+              this.fireBullet(u, def.dmg, 500, def.slow ? 8 : 7,
+                def.slow ? { slow: def.slow, slowTime: def.slowTime } : null);
+              u.cd = def.atkCd;
+            } else { u.cd = 0; }
+          }
+        } else if (u.ai === 'chain') {
+          const def = UNIT_DEFS[u.key];
+          u.cd -= dt * haste;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) {
+            const tgt = this.nearestEnemyAhead(u);
+            if (tgt) { this.chainLightning(u, tgt); u.cd = def.atkCd; }
+            else { u.cd = 0; }
+          }
+        } else if (u.ai === 'economy') {
+          const def = UNIT_DEFS[u.key];
+          u.cd -= dt;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) { this.dropHenCorn(u); u.cd = def.cycle || 5; }
+        } else if (u.ai === 'healer') {
+          const def = UNIT_DEFS[u.key];
+          u.cd -= dt;
+          this.updateCdLabel(u);
+          if (u.cd <= 0) { u.cd = def.cycle || 3; this.healAround(u, def.heal || 10); }
+        } else if (u.ai === 'bomber') {
+          const def = UNIT_DEFS[u.key];
+          const near = this.enemies.find((e) =>
+            e.row === u.row && Math.abs(e.x - u.x) <= 118
+          );
+          if (near) this.detonate(u, def.blast || 140);
+        } else if (u.ai === 'charger') {
+          const def = UNIT_DEFS[u.key];
+          u.x += u.dashSpeed * dt;
+          u.body.x = u.x;
+          let hit2 = null;
+          for (const e of this.enemies) {
+            if (e.row !== u.row) continue;
+            if (Math.abs(e.x - u.x) <= 42) { hit2 = e; break; }
+          }
+          if (hit2) {
+            this.damageEnemy(hit2, def.dashDmg || 120);
+            this.chargeBurst(u);
+            this.removeUnit(u);
+          } else if (u.x >= u.dashEnd) {
+            this.chargeBurst(u);
+            this.removeUnit(u);
+          }
+        }
+      }
+    }
+
+    updateEnemies(dt) {
+      for (const e of this.enemies.slice()) {
+        this.syncBar(e.bar, dt, e.x, e.barY);
+
+        // 召唤公鸡：周期性放出一只疾风小公鸡
+        if (e.summonEvery) {
+          e.summonLeft -= dt;
+          if (e.summonLeft <= 0) {
+            e.summonLeft = e.summonEvery;
+            this.spawnEnemy(e.row, e.summonType, Math.min(CANVAS_W - 36, e.x + 34));
+          }
+        }
+
+        // 喷火公鸡：周期性灼烧相邻格的我方单位
+        if (e.burnDmg) {
+          e.burnLeft -= dt;
+          if (e.burnLeft <= 0) {
+            e.burnLeft = e.burnCd || 1.5;
+            this.burnAround(e);
+          }
+        }
+
+        // 飞行公鸡：越过前排，不被单位阻挡
+        const blocker = e.flying ? null : this.findBlocker(e);
+        if (blocker) {
+          e.body.angle = 0;
+          e.attackCd -= dt;
+          if (e.attackCd <= 0) {
+            e.attackCd = e.peckRate;
+            this.damageUnit(blocker, e.peckDmg, e);
+            if (e.poisonDmg && !blocker.removed) {
+              blocker.venomT = 3;
+              blocker.venomDps = e.poisonDmg;
+            }
+            e.peckCount += 1;
+            if (e.shockEvery && e.peckCount % e.shockEvery === 0) this.giantShock(e);
+            if (this.over || !e.body.active) continue;
+            this.tweens.add({
+              targets: e.body, x: e.x - 9, duration: 85, yoyo: true,
+              onComplete: () => { if (e.body.active) e.body.x = e.x; }
+            });
+          }
+        } else if (e.x > G.x0 + 34) {
+          if (e.slowT > 0) e.slowT -= dt;
+          const slowMul = e.slowT > 0 ? (e.slowFactor || 0.55) : 1;
+          const rageMul = e.rage ? 1 + (1 - e.hp / e.maxHp) * 0.8 : 1;   // 狂暴：越残血越快
+          e.x -= (e.speed || ENEMY.speed) * dt * slowMul * rageMul;
+          this.syncEnemy(e);
+
+          // 走路时左右轻摆
+          e.walkPhase += dt * 9;
+          e.body.angle = Math.sin(e.walkPhase) * 2.6;
+
+          if (e.x <= G.x0 + 34) {
+            e.x = G.x0 + 34;
+            this.syncEnemy(e);
+          }
+        } else {
+          // 走到鸡窝：开始啃基地
+          e.body.angle = 0;
+          e.attackCd -= dt;
+          if (e.attackCd <= 0) {
+            e.attackCd = BASE.peckRate;
+            e.peckCount += 1;
+            this.damageBase(e.peckDmg || BASE.peckDmg);
+            this.tweens.add({
+              targets: e.body, x: e.x + 7, duration: 80, yoyo: true,
+              onComplete: () => { if (e.body.active) e.body.x = e.x; }
+            });
+            if (e.shockEvery && e.peckCount % e.shockEvery === 0) this.giantShock(e);
+            if (this.over) return;
+          }
+        }
+      }
+    }
+
+    updateBullets(dt) {
+      for (const b of this.bullets.slice()) {
+        b.x += b.speed * dt;
+        b.t += dt;
+
+        const pulse = 1 + 0.12 * Math.sin(b.t * 20);
+        b.core.setPosition(b.x, b.y).setScale(pulse);
+        b.glow.setPosition(b.x, b.y).setScale(1 + 0.16 * Math.sin(b.t * 20 + 1.1));
+
+        let hit = null;
+        for (const e of this.enemies) {
+          if (e.row !== b.row) continue;
+          if (Math.abs(e.x - b.x) <= 34) { hit = e; break; }
+        }
+
+        if (hit) {
+          if (b.slow > 0) {
+            hit.slowT = b.slowTime * (1 - (hit.slowResist || 0));
+            hit.slowFactor = b.slow;
+            const ring = this.add.circle(hit.x, hit.y, 26, 0xbfe6ff, 0.28)
+              .setStrokeStyle(3, 0x7fc4f0, 0.9).setDepth(24);
+            this.tweens.add({ targets: ring, scale: 1.7, alpha: 0, duration: 260,
+              onComplete: () => ring.destroy() });
+          }
+          this.damageEnemy(hit, b.dmg);
+          this.removeBullet(b);
+        } else if (b.x > CANVAS_W + 20) {
+          this.removeBullet(b);
+        }
+      }
+    }
+
+    updateDrops(dt) {
+      for (const d of this.drops.slice()) {
+        d.life -= dt;
+
+        // 呼吸光晕：始终轻微起伏，帮助玩家一眼看到
+        const breath = Math.sin(this.clock * 2.4 + d.phase);
+        d.glow.setScale(1 + 0.14 * breath);
+        d.glow.setAlpha(0.16 + 0.10 * (0.5 + 0.5 * breath));
+
+        if (!d.landed) {
+          d.vy = Math.min(320, d.vy + 900 * dt);
+          d.y = Math.min(d.targetY, d.y + d.vy * dt);
+          d.phase += dt * 6;
+          const sway = Math.sin(d.phase) * 3;
+          d.main.setPosition(d.x + sway, d.y);
+          d.hi.setPosition(d.x + sway - 5, d.y - 5);
+          d.glow.setPosition(d.x + sway, d.y);
+
+          if (d.y >= d.targetY) {
+            d.landed = true;
+            d.settling = true;
+            d.autoLeft = AUTO_COLLECT_DELAY;   // 落地 → 开始停留倒计时
+            this.tweens.add({
+              targets: d.main, scaleX: 1.15, scaleY: 0.86, duration: 90, yoyo: true,
+              onComplete: () => { d.main.setScale(1); d.settling = false; }
+            });
+          }
+        } else {
+          if (!d.settling) {
+            const b = 1 + Math.sin(d.life * 4) * 0.04;
+            d.main.setScale(b);
+          }
+          d.glow.setPosition(d.x, d.y);
+
+          // 自动收起：停留倒计时走完 → 走与手动点击相同的 collectOne
+          if (d.autoLeft !== null && d.alive &&
+              this.state === 'FIGHTING' && !this.paused && !this.over) {
+            d.autoLeft -= dt;
+            if (d.autoLeft <= 0) {
+              this.collectOne(d);   // +25 / 飞行 / pulseCorn / 日志 全部复用
+              continue;
+            }
+          }
+        }
+
+        if (d.life <= 2) {
+          const a = 0.3 + 0.7 * Math.abs(Math.sin(d.life * 6));
+          d.main.setAlpha(a);
+          d.hi.setAlpha(a);
+        }
+        if (d.life <= 0) {
+          d.alive = false;
+          this.drops = this.drops.filter((x) => x !== d);
+          this.tweens.add({
+            targets: [d.main, d.hi, d.glow], scale: 0.2, alpha: 0,
+            duration: 160,
+            onComplete: () => { d.main.destroy(); d.hi.destroy(); d.glow.destroy(); }
+          });
+        }
+      }
+    }
+
+    /* ---------------- 结束 ---------------- */
+    gameOver() {
+      if (this.over) return;
+      this.state = 'LOSE';
+      pushLog('🚨 鸡窝被啃空，玉米村失守');
+      this.showEndModal({
+        title: '💧 玉米村失守了……',
+        body: '再试一次吧！',
+        button: '沿用卡组再战',
+        onClose: () => {
+          this.game.registry.set('quickDeck', true);
+          this.scene.restart();
+        },
+        secondary: {
+          label: '重新选牌',
+          onClick: () => {
+            try { localStorage.removeItem('eggwar_deck_v1'); } catch (e) { /* ignore */ }
+            this.scene.restart();
+          }
+        }
+      });
+    }
+  }
+
+  const config = {
+    type: Phaser.AUTO,
+    width: CANVAS_W,
+    height: CANVAS_H,
+    parent: 'game',
+    backgroundColor: '#fff8ec',
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    scene: [GameScene]
+  };
+
+  window.__eggGame = new Phaser.Game(config);
+
+
+  /* ---------------- 玩法工具按钮绑定 ---------------- */
+  const shovelEl = document.getElementById('shovel-btn');
+  const speedEl = document.getElementById('speed-btn');
+
+  if (shovelEl) {
+    shovelEl.addEventListener('click', () => {
+      if (activeScene) activeScene.toggleShovel();
+    });
+  }
+
+  if (speedEl) {
+    speedEl.addEventListener('click', () => {
+      if (activeScene) activeScene.toggleSpeed();
+    });
+  }
+
+  // 横竖屏切换：画布尺寸在启动时锁定，旋转后重载以重排布局
+  let lastPortrait = window.innerWidth <= window.innerHeight;
+  window.addEventListener('resize', () => {
+    const nowPortrait = window.innerWidth <= window.innerHeight;
+    if (nowPortrait !== lastPortrait) {
+      lastPortrait = nowPortrait;
+      clearTimeout(window.__eggRotateT);
+      window.__eggRotateT = setTimeout(() => location.reload(), 220);
+    }
+  });
+
+  const deckClearEl = document.getElementById('deck-clear');
+  const deckStartEl = document.getElementById('deck-start');
+
+  if (deckClearEl) {
+    deckClearEl.addEventListener('click', () => {
+      if (activeScene) activeScene.clearDeck();
+    });
+  }
+
+  if (deckStartEl) {
+    deckStartEl.addEventListener('click', () => {
+      if (activeScene) activeScene.confirmDeck();
+    });
+  }
+}
+})();
+</script>
+
+</body>
+</html>
