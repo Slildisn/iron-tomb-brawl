@@ -1240,8 +1240,8 @@ function bootGame() {
       unit.size = def.size;
 
       // 母鸡专属：技能冷却环 + 读秒（纯视觉，不参与任何判定）
-      if (key === 'hen') {
-        unit.cdMax = 5;
+      if (key === 'hen' || key === 'healer') {
+        unit.cdMax = key === 'hen' ? 5 : 3;   // 只用于画环，不改任何 cd 数值
         unit.ring = this.add.graphics().setDepth(15);
         unit.cdText = this.add.text(x, barY - 14, '', {
           fontFamily: FONT, fontSize: '13px', color: '#b35a1f', fontStyle: 'bold'
@@ -1999,6 +1999,7 @@ function bootGame() {
           }
         } else if (u.key === 'healer') {
           u.cd -= dt;
+          this.drawHenCd(u);
           if (u.cd <= 0) {
             u.cd = 3;
             this.healAround(u, 10);
