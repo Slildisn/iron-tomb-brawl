@@ -1477,7 +1477,7 @@ function bootGame() {
       this.pendingRow = null;
       this.plantCd = {};          // 每张卡的剩余种植冷却（秒）
       this.shovel = false;        // 铲子是否选中
-      this.speedScale = 1;        // 1× / 4× 倍速
+      this.speedScale = 1;        // 1× / 2× / 3× / 4× 倍速
       this.deck = this.loadDeck();       // 已保存的 10 只卡组
       this.deckPicking = false;
 
@@ -2719,9 +2719,9 @@ function bootGame() {
     /* ---------------- 倍速 ---------------- */
     toggleSpeed() {
       if (this.over || this.paused) return;
-      this.speedScale = this.speedScale === 1 ? 4 : 1;
+      this.speedScale = this.speedScale >= 4 ? 1 : (this.speedScale || 1) + 1;
       this.syncTools();
-      this.showToast(this.speedScale === 4 ? '4 倍速' : '恢复 1 倍速');
+      this.showToast(this.speedScale === 1 ? '恢复 1 倍速' : this.speedScale + ' 倍速');
     }
 
     syncTools() {
