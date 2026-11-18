@@ -1,0 +1,58 @@
+name: cleanup-iron-tomb
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cleanup-iron-tomb.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove iron-tomb leftovers and fix links
+        run: |
+          python3 - <<'PY'
+          import io, re
+
+          # 1) 首页页脚：把指向 launcher.html 的铁墓链接换成主站链接
+          p = 'index.html'
+          s = io.open(p, encoding='utf-8').read()
+          pat = re.compile(r'<a href="\./launcher\.html">[^<]*</a>')
+          assert len(pat.findall(s)) == 1, pat.findall(s)
+          s = pat.sub('<a href="https://slildisn.github.io/">返回主站</a>', s)
+          io.open(p, 'w', encoding='utf-8').write(s)
+          print('index.html fixed')
+
+          # 2) README：标注入口页位置 + 说明仓库已清理
+          r = 'README.md'
+          t = io.open(r, encoding='utf-8').read()
+          old1 = '- 入口页：`chicken/index.html`'
+          new1 = '- 入口页：`index.html`（仓库根目录，已直接指向新版）／副本在 `chicken/index.html`'
+          assert t.count(old1) == 1
+          t = t.replace(old1, new1)
+          old2 = '- 在线地址：https://slildisn.github.io/iron-tomb-brawl/chicken/game.html'
+          new2 = old2 + '\n\n> 仓库已清理铁墓大乱斗残留文件（game.html / launcher.html / manifest.json / sw.js），现在只包含《母鸡大战公鸡》。'
+          assert t.count(old2) == 1
+          t = t.replace(old2, new2)
+          io.open(r, 'w', encoding='utf-8').write(t)
+          print('README fixed')
+          PY
+          git rm -q game.html launcher.html manifest.json sw.js
+          echo '--- 根目录剩余 ---'
+          ls
+
+      - name: Commit and push
+        run: |
+          git config user.name "CYRENE Sync"
+          git config user.email "sync@users.noreply.github.com"
+          git rm -q .github/workflows/cleanup-iron-tomb.yml
+          git add index.html README.md
+          git commit -m "清理铁墓大乱斗残留，仓库只保留母鸡大战公鸡"
+          git push
