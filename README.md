@@ -8,7 +8,7 @@
 
 **休闲塔防小游戏 —— 放置母鸡单位，收集玉米粒，抵御公鸡进攻，守护鸡窝基地。**
 
-<a href="https://slildisn.github.io/iron-tomb-brawl/chicken/game.html">
+<a href="https://slildisn.github.io/hen-vs-rooster/chicken/game.html">
   <img src="docs/play-button.svg" alt="进入游戏" width="300">
 </a>
 
@@ -24,7 +24,7 @@
 
 - 入口页：`index.html`（仓库根目录，已直接指向新版）／副本在 `chicken/index.html`
 - 游戏本体：`chicken/game.html`
-- 在线地址：https://slildisn.github.io/iron-tomb-brawl/chicken/game.html
+- 在线地址：https://slildisn.github.io/hen-vs-rooster/chicken/game.html
 
 > 仓库已清理铁墓大乱斗残留文件（game.html / launcher.html / manifest.json / sw.js），现在只包含《母鸡大战公鸡》。
 
@@ -116,6 +116,6 @@
 
 **Designed & Directed by CYRENE** · © 2024 CYRENE Studio · All Rights Reserved.
 
-<sub>仓库名保留历史 `iron-tomb-brawl`；《母鸡大战公鸡》最新版在 `chicken/`</sub>
+<sub>仓库已更名为 `hen-vs-rooster`，内容只收录《母鸡大战公鸡》</sub>
 
 </div>
