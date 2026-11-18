@@ -22,9 +22,11 @@
 
 最新横屏版已放在 **`chicken/` 目录**：
 
-- 入口页：`chicken/index.html`
+- 入口页：`index.html`（仓库根目录，已直接指向新版）／副本在 `chicken/index.html`
 - 游戏本体：`chicken/game.html`
 - 在线地址：https://slildisn.github.io/iron-tomb-brawl/chicken/game.html
+
+> 仓库已清理铁墓大乱斗残留文件（game.html / launcher.html / manifest.json / sw.js），现在只包含《母鸡大战公鸡》。
 
 本次更新内容：**横屏适配（横屏 10 列 / 1600 宽 / 卡槽单行）**，单位从 8 种扩充到 **70 种**，开局可自选 10 张卡组。
 
