@@ -1,0 +1,48 @@
+name: restore-repo-name
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-repo-name.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore old repo slug
+        run: |
+          python3 - <<'PY'
+          import io, re
+
+          for p in ['README.md', 'index.html', 'chicken/index.html']:
+              s = io.open(p, encoding='utf-8').read()
+              n = s.count('hen-vs-rooster')
+              s = s.replace('hen-vs-rooster', 'iron-tomb-brawl')
+              io.open(p, 'w', encoding='utf-8').write(s)
+              print(p, 'restored', n)
+
+          r = 'README.md'
+          t = io.open(r, encoding='utf-8').read()
+          old = re.compile(r'<sub>仓库已更名为.*?</sub>')
+          if old.search(t):
+              t = old.sub('<sub>仓库名沿用 `iron-tomb-brawl`；内容只收录《母鸡大战公鸡》</sub>', t)
+              io.open(r, 'w', encoding='utf-8').write(t)
+              print('footnote restored')
+          PY
+          grep -rn 'hen-vs-rooster' --include='*.html' --include='*.md' . || echo '新名已清理完毕'
+
+      - name: Commit and push
+        run: |
+          git config user.name "CYRENE Sync"
+          git config user.email "sync@users.noreply.github.com"
+          git rm -q .github/workflows/restore-repo-name.yml
+          git add -u
+          git commit -m "仓库名沿用原 slug，修正链接与说明"
+          git push
